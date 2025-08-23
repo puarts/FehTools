@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf8" />
+  <title>FE相関図メーカー</title>
+  <link rel="stylesheet" href="/css/main.css?20181201" type="text/css" />
+</head>
+
+<body style="text-align: left;">
+  <p>FE烈火の剣の支援関係を図示したページです。スマホは未対応です。</p>
+  <style>
+    .svg__container {
+      position: relative;
+      width: 100%;
+      border: 1px solid rgb(220, 220, 220);
+      /* text-align: left; */
+      /* width: fit-content; */
+    }
+
+    .charOptionSelect {
+      width: 220px;
+
+    }
+
+    .editByTextButton {
+      background-image: url('/images/720_pe_h.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 20px;
+      height: 20px;
+      border-style: none;
+      display: inline-block;
+    }
+
+    .editByTextButton:hover {
+      opacity: 0.5;
+    }
+
+    .darken {
+      filter: brightness(70%);
+    }
+
+    .manualTextbox {
+      font-size: 18px;
+      width: 220px;
+      vertical-align: bottom;
+      display: inline-block;
+    }
+
+    .topMenuIconButton {
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 65px;
+      height: 32px;
+      border: 1px solid #ccc;
+      vertical-align: middle;
+    }
+
+    .iconButton {
+      background-size: contain;
+      background-repeat: no-repeat;
+      width: 32px;
+      height: 32px;
+      border-style: none;
+    }
+
+    .iconButton:hover {
+      opacity: .5;
+    }
+
+    .selectableIcon:hover {
+      opacity: .5;
+    }
+
+
+    .edgeEditBox {
+      position: relative;
+      width: 246px;
+      padding: 5px;
+      background-color: #9ccabf;
+      margin: 3px;
+      display: inline-block;
+      border: 2px solid #797;
+      border-radius: 10px;
+      word-wrap: break-word;
+    }
+
+    .edgeEditBoxContainer {
+      position: relative;
+      padding: 5px;
+      margin: 0px;
+      display: block;
+      border: 2px solid #797;
+      border-radius: 10px;
+      background-color: rgb(204, 228, 204);
+      width: fit-content;
+      height: fit-content;
+    }
+
+    dt {
+      font-weight: bold;
+    }
+
+    dd {
+      margin-inline-start: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+
+    .detailSettingBox {
+      padding: 5px;
+      border: solid 1px #999;
+      background-color: #f9f9f9;
+    }
+
+    .detailSummary {
+      padding: 5px;
+      border: solid 1px #999;
+      background-color: #ddd;
+    }
+  </style>
+
+  <details style="margin: 10px;background-color: #eee;padding:5px;display: none;">
+    <summary>ツール説明</summary>
+    <dl>
+      <dt>グラフの拡大縮小</dt>
+      <dd>
+        マウススクロールで拡大縮小できます。
+      </dd>
+      <dt>グラフの移動</dt>
+      <dd>
+        マウスス中ボタンのドラッグ移動でグラフを移動できます。
+      </dd>
+      <dt>ノードの作成</dt>
+      <dd>ダブルクリックでノードを作成できます。</dd>
+      <dt>エッジの作成</dt>
+      <dd>ノードマウスオーバー時にノード上に表示される円を左マウスボタンでドラッグし、別のノード上にドロップすることで、それらのノード間を繋ぐエッジを作成できます。</dd>
+      <dt>コメントの作成</dt>
+      <dd>Ctrlキー+ダブルクリックでコメントを作成できます。</dd>
+      <dt>ノードのキャラ変更</dt>
+      <dd>ノードのキャラ名をクリックするとキャラを変更できます。</dd>
+      <dt>エッジのラベル変更</dt>
+      <dd>エッジマウスオーバー時にエッジ上に表示される四角、もしくは既に設定したラベルをクリックするとエッジラベルを変更できます。</dd>
+    </dl>
+
+  </details>
+  <div style="clear: both;"></div>
+
+  <div id="app" style="text-align: left;">
+    <div>
+      <details open class="detailsDefault detailSettingBox">
+        <summary class="detailSummary">支援表示キャラクター</summary>
+        <span style="display: inline-block;margin:3px;" v-for="option in charFilterOptions">
+          <label>
+            <input v-bind:name="option.label" type="checkbox" v-model="option.isEnabled" class="checkboxDefult"
+              @change="g_appData.updateCharFilter()">
+            <span v-html="option.label"></span>
+          </label>
+        </span>
+        <div class="divDefault">
+          <input type="button" value="全てオン" class="buttonDefault" @click="g_appData.setAllFilterOptions(true)">
+          <input type="button" value="全てオフ" class="buttonDefault" @click="g_appData.setAllFilterOptions(false)">
+        </div>
+      </details>
+
+      <details class="detailsDefault detailSettingBox">
+        <summary class="detailSummary">除外キャラクター</summary>
+        <span style="display: inline-block;margin:3px;" v-for="option in charExcludeOptions">
+          <label>
+            <input v-bind:name="option.label" type="checkbox" v-model="option.isEnabled" class="checkboxDefult"
+              @change="g_appData.updateCharExcludeFilter()">
+            <span v-html="option.label"></span>
+          </label>
+        </span>
+        <div class="divDefault">
+          <input type="button" value="全てオン" class="buttonDefault" @click="g_appData.setAllExcludeOptions(true)">
+          <input type="button" value="全てオフ" class="buttonDefault" @click="g_appData.setAllExcludeOptions(false)">
+        </div>
+      </details>
+    </div>
+    <div v-if="isDebugModeEnabled">
+      配置: <select v-model="graph.layout" style="font-size: 18px;" @change="g_appData.updateGraphAuto()">
+        <option v-for="option in layoutOptions" v-bind:value="option.id">
+          {{ option.text }}
+        </option>
+      </select>
+      <select v-model="graph.rankdir" style="font-size: 18px;" @change="g_appData.updateGraphAuto()"
+        v-if="graph.layout=='dot'">
+        <option v-for="option in rankdirOptions" v-bind:value="option.id">
+          {{ option.text }}
+        </option>
+      </select>
+    </div>
+    <div style="display: block;position:relative">
+      <div v-if="isDebugModeEnabled">
+        <span v-show="isDebugModeEnabled">
+          <input type="button" value="図を強制更新" @click="g_appData.__updateGraph();">
+          <input id="isAutoUpdateEnabled" v-model="isAutoUpdateEnabled" type="checkbox"><label
+            for="isAutoUpdateEnabled">図の自動更新</label>
+        </span>
+      </div>
+
+      <div id="graph" class="svg__container">
+        <div style="position:absolute;right:0;top:0;">
+          <div style="display:inline-block">
+            <input type="button" class="topMenuIconButton selectableIcon" value="自動配置"
+              onclick="g_appData.layoutVisibleGraphs();">
+          </div>
+          <input id="showDialog" type="button" class="topMenuIconButton selectableIcon" value="詳細"
+            @click="showSettingDialog();">
+          <input type="button" class="topMenuIconButton selectableIcon"
+            style="background-image: url('/images/download.png');width:32px" onclick="saveGraphAsPng()">
+        </div>
+        <!--選択エッジの編集UI-->
+        <textarea id="editSelectedEdgeLabel" v-model="(selectedEdge || {}).label"
+          @focusout="g_appData.endEditEdgeLabel();" style="position: absolute;top: 0;left: 0;"
+          v-show="isEdgeLabelEditing"></textarea>
+
+        <!--選択クラスターの編集UI-->
+        <textarea id="editSelectedClusterLabel" v-model="(selectedCluster || {}).label"
+          @focusout="g_appData.endEditClusterLabel();" style="position: absolute;top: 0;left: 0;"
+          v-show="isClusterLabelEditing"></textarea>
+
+        <!--選択ノードの編集UI-->
+        <div id="editSelectedNodeLabel" v-show="isNodeLabelEditingOnGraph" style="position: absolute;top: 0;left: 0;">
+          <select2 :options="titleToCharOptions[currentTitle]" v-model="(selectedNode || {}).name"
+            @input="selectedNodeNameChanged()" @close="g_appData.clearSelection();g_appData.updateGraphAuto();"
+            class="charOptionSelect"></select2>
+        </div>
+
+        <!--選択コメントの編集UI-->
+        <textarea id="editSelectedComment" v-model="(selectedComment || {}).text" @focusout="g_appData.endEditComment()"
+          style="position: absolute;top: 0;left: 0;" v-show="isCommentEditing"></textarea>
+
+      </div>
+      <p>{{message}}</p>
+    </div>
+    <div style="display: none;">
+      拡縮:
+      <input type="number" v-model="graphScale" step="0.1" readonly
+        @change="g_appData.svgManager.updateViewBoxScale(g_appData.graphScale)">
+      <br />
+      オフセット:
+      <input type="number" v-model="graphOffsetX" step="0.1" readonly>
+      <input type="number" v-model="graphOffsetY" step="0.1" readonly>
+
+      <!-- <input type="number" v-model="svgManager.viewBoxMinX" step="10" @change="g_appData.svgManager.updateViewBox()">
+                  <input type="number" v-model="svgManager.viewBoxMinY" step="10" @change="g_appData.svgManager.updateViewBox()"> -->
+
+    </div>
+
+    <div id="settingDialog">
+      <div v-for="comment in selectedComments">
+        フォントサイズ: <input type="number" v-model="comment.fontSize"><br>
+        <textarea v-model="comment.text" @focusout="g_appData.endEditComment()"></textarea>
+        背景色：<input type="color" v-model="comment.backgroundColor" @input="g_appData.endEditComment()"><br>
+        <input id="commentIsBackgroundColorEnabled" type="checkbox" v-model="comment.isBackgroundColorEnabled"><label
+          for="commentIsBackgroundColorEnabled">背景色有効</label>
+      </div>
+      <div v-for="node in selectedNodes.filter(x => x instanceof GraphPoint)">
+        半径: <input type="number" v-model="node.radius">
+        フォントサイズ: <input type="number" v-model="node.fontSize"><br>
+        テキスト:
+        <textarea v-model="node.text" @focus="g_appData.beginEditNodeLabel()"
+          @focusout="g_appData.endEditNodeLabel()"></textarea>
+        <div v-if="isDebugModeEnabled">
+          id={{node.id}}<br>
+          isSelected={{node.isSelected}}
+        </div>
+      </div>
+
+      <div v-for="node in selectedNodes.filter(x => x instanceof GraphNode)">
+        <span>
+          <select2 :options="titleToCharOptions[currentTitle]" v-model="node.name"
+            @input="g_appData.updateNodeInfo(node);" class="charOptionSelect"></select2>
+        </span>
+        名前上書き: <textarea v-model="(selectedNode || {}).overrideName" @focus="g_appData.beginEditNodeLabel()"
+          @focusout="g_appData.endEditNodeLabel()"></textarea>
+
+        <br>
+        画像フィルター:
+        <select v-model="node.imageFilter" @change="g_appData.updateGraphAuto()">
+          <option v-for="(value, key) in ImageFilter" :value="value">{{key}}</option>
+        </select>
+
+        <div v-if="isDebugModeEnabled">
+          id={{node.id}}<br>
+          name={{node.name}},<br>
+          displayName={{node.displayName}},<br>
+          imagePath={{node.imagePath}},<br>
+          isSelected={{node.isSelected}}<br>
+          mouseOver={{node.mouseOver}}<br>
+        </div>
+      </div>
+      <div v-for="value in selectedEdges" class="edgeEditBox">
+        <div style="position:absolute;top:2px;right:2px;">
+          <input type="button" @click="g_appData.removeEdge(value);g_appData.updateGraphAuto();"
+            style="width:20px;height:20px;background-image: url('/images/remove.png');background-color: #9ccabf;"
+            class="iconButton" />
+        </div>
+
+        <div style="margin-top: 20px;">
+          <div style="display: inline-block; vertical-align: middle;">
+            <span v-if="value.usesSourceText">
+              <input type="text" v-model="value.sourceText" class="manualTextbox"
+                @change="g_appData.updateGraphAuto()" />
+            </span>
+            <span v-else>
+              <select2 :options="graph.nodes" v-model="value.source" @input="g_appData.updateGraphAuto()"
+                class="charOptionSelect">
+              </select2>
+            </span>
+          </div>
+          <div style="display: inline-block; vertical-align: middle;">
+            <span v-if="value.usesSourceText">
+              <input type="button" class="editByTextButton" @click="value.usesSourceText = !value.usesSourceText;">
+            </span>
+            <span v-else>
+              <input type="button" class="editByTextButton darken"
+                @click="value.usesSourceText = !value.usesSourceText;">
+            </span>
+          </div>
+        </div>
+        <div style="padding: 3px;">
+          <select v-model="value.dir" style="font-size: 18px;" @change="g_appData.updateGraphAuto()">
+            <option v-for="option in dirOptions" v-bind:value="option.id">
+              {{ option.text }}
+            </option>
+          </select>
+
+          <input type="text" v-model="value.label" @change="g_appData.updateGraphAuto()"
+            style="vertical-align:text-bottom;width:170px;">
+          <input type="button" @click="g_appData.swapEdgeDirection(value);g_appData.updateGraphAuto();"
+            style="background-image: url('/images/swap.png');width:20px;height:20px" class="iconButton" />
+        </div>
+        <div>
+          <div style="display: inline-block; vertical-align: middle;">
+
+            <span v-if="value.usesDestinationText">
+              <input type="text" v-model="value.destinationText" class="manualTextbox"
+                @change="g_appData.updateGraphAuto()" />
+            </span>
+            <span v-else>
+              <select2 :options="graph.nodes" v-model="value.destination" class="charOptionSelect"
+                @input="g_appData.updateGraphAuto()">
+              </select2>
+            </span>
+          </div>
+          <div style="display: inline-block; vertical-align: middle;">
+
+            <span v-if="value.usesDestinationText">
+              <input type="button" class="editByTextButton"
+                @click="value.usesDestinationText = !value.usesDestinationText;">
+            </span>
+            <span v-else>
+              <input type="button" class="editByTextButton darken"
+                @click="value.usesDestinationText = !value.usesDestinationText;">
+            </span>
+          </div>
+        </div>
+        <div style="margin-top: 2px;" v-if="graph.layout == 'dot'">
+          <label v-bind:for="'rank' + value.id">
+            <input v-bind:id="'rank' + value.id" type="checkbox" v-model="value.isRankSame"
+              @change="g_appData.updateGraphAuto();">
+            同階層
+          </label>
+        </div>
+        <div style="display: inline-block;background-color: aliceblue;margin: 3px;padding:3px;border: solid 1px #999;"
+          v-if="isDebugModeEnabled">
+          <div>
+            source={{value.source}}, destination={{value.destination}}
+          </div>
+          <div>
+            destinationText="{{value.destinationText}}"
+          </div>
+        </div>
+      </div>
+      <div v-for="cluster in selectedClusters">
+        <input type="text" v-model="cluster.label" @focusout="g_appData.endEditClusterLabel()"><br>
+        背景色：<input type="color" v-model="cluster.color" @input="cluster.setLabelColorAuto()"><br>
+        ラベル位置:
+        <select v-model="cluster.labelPosition" style="font-size: 18px;" @change="g_appData.updateGraphAuto()">
+          <option v-for="key in Object.keys(ClusterLabelPosition)" v-bind:value="ClusterLabelPosition[key]">
+            {{ key }}
+          </option>
+        </select><br>
+        サイズオフセット: <input type="number" v-model="cluster.widthOffset" @change="g_appData.updateGraphAuto()"><input
+          type="number" v-model="cluster.heightOffset" @change="g_appData.updateGraphAuto()"><br>
+        <div v-if="isDebugModeEnabled">
+          id={{cluster.id}}, name={{cluster.name}},<br />
+          isSelected={{cluster.isSelected}}<br />
+        </div>
+      </div>
+    </div>
+
+
+    <!-- <div>
+      <input type="button" value="インポート" @click="g_appData.importGraph()">
+      <input type="button" value="エクスポート" @click="g_appData.exportGraph()">
+      <div>
+        <textarea id="graphSetting" v-model="graphSettingText" style="width: 400px;height: 50px;"></textarea>
+      </div>
+
+    </div> -->
+
+
+    <details v-if="isDebugModeEnabled">
+      <summary>グループの設定</summary>
+      <input id="showsCluster" v-model="showsCluster" type="checkbox" @change="g_appData.__updateGraph();"><label
+        for="showsCluster">グループを表示する</label>
+      <table>
+        <tr>
+          <th style="padding:0;text-align: left;"><input type="button"
+              @click="g_appData.createNewCluster();g_app.$forceUpdate();"
+              style="background-image: url('/images/add.png');" class="iconButton" /></th>
+          <th>グループ名</th>
+          <th>背景色</th>
+          <th>所属キャラ</th>
+        </tr>
+        <tr v-for="cluster in graph.clusters">
+          <td style="vertical-align: top;"><input type="button"
+              @click="g_appData.removeCluster(cluster);g_appData.updateGraphAuto();"
+              style="background-image: url('/images/remove.png');" class="iconButton" /></td>
+          <td style="vertical-align: top;">
+            <input type="text" class="manualTextbox" v-model="cluster.label"
+              @change="g_appData.syncClusterLabelToOption(cluster);g_appData.updateGraphAuto()" />
+          </td>
+          <td style="vertical-align: top;">
+            <input type="color" v-model="cluster.color" @change="g_appData.updateGraphAuto()">
+          </td>
+          <td style="width: 290px;">
+            <input type="button" @click="g_appData.addEmptyNodeToCluster(cluster)"
+              style="background-image: url('/images/add.png');" class="iconButton" />
+
+            <div style="float:right">
+              <table>
+                <tr v-for="node in cluster.belongingNodes">
+                  <td>
+                    <input type="button"
+                      @click="g_appData.removeNodeFromCluster(node, cluster);g_appData.updateGraphAuto()"
+                      style="background-image: url('/images/remove.png');" class="iconButton" />
+                  </td>
+                  <td>
+                    <select2 :options="titleToCharOptions[currentTitle]" v-model="node.name" class="charOptionSelect"
+                      @input="g_appData.updateGraphAuto()">
+                    </select2>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </details>
+
+
+
+    <p>
+    <details open style="padding: 5;" class="detailsDefault">
+      <summary>設定の共有</summary>
+      以下のURLで設定を再現する事ができます。<br />
+      <input type="button" value="コピー" @click="copyUrl()">
+      <input type="button" value="このURLをツイート" @click="location.href=g_appData.tweetUrl;">
+      <br />
+      <textarea id="urlTextArea" v-model="exportSettingUrl" style="width: 400px;height: 50px;" readonly></textarea>
+
+    </details>
+    </p>
+    <p>
+    <div v-show="isDebugModeEnabled">
+      <div>
+        <input type="button" value="URL強制インポート" @click="importUrl(g_appData.debugImportUrl, 1)">
+        <br />
+        <textarea v-model="debugImportUrl" style="width: 600px;height:100px;"></textarea>
+        <br />
+        ログ:<br />
+        <textarea v-model="log" style="width: 600px;height: 300px; "></textarea>
+      </div>
+      <fieldset class="edgeEditBoxContainer" style="display: inline-block;">
+        <legend>graph.comments</legend>
+        <div v-for="comment in graph.comments">
+          <div class="edgeEditBox">
+            <div>
+              id={{comment.id}}
+            </div>
+            <div>
+              comment={{comment.text}}
+            </div>
+            <div>
+              isSelected={{comment.isSelected}}
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="edgeEditBoxContainer" style="display: inline-block;">
+        <legend>graph.points</legend>
+        <div v-for="point in graph.points">
+          <div class="edgeEditBox">
+            <div>
+              id={{point.id}}
+            </div>
+            <div>
+              pos=({{point.x}}, {{point.y}})
+            </div>
+            <div>
+              text={{point.text}}
+            </div>
+            <div>
+              isSelected={{point.isSelected}}
+            </div>
+          </div>
+        </div>
+      </fieldset>
+      <fieldset class="edgeEditBoxContainer" style="display: inline-block;">
+        <legend>graph.nodeBases</legend>
+        <div v-for="node in graph.nodeBases">
+          <div class="edgeEditBox">
+            <div>
+              id={{node.id}}, name={{node.name}}
+            </div>
+            <div>
+              displayName={{node.displayName}}
+            </div>
+            <div>
+              pos=({{node.x}}, {{node.y}})
+            </div>
+            <div>
+              imagePath={{node.imagePath}}
+            </div>
+            <div>
+              isSelected={{node.isSelected}}
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+
+      <fieldset class="edgeEditBoxContainer" style="display: inline-block;">
+        <legend>displayGraph.nodes</legend>
+        <div v-for="node in displayGraph.nodes">
+          <div class="edgeEditBox">
+            <div>
+              id={{node.id}}, name={{node.name}}
+            </div>
+            <div>
+              displayName={{node.displayName}}
+            </div>
+            <div>
+              pos=({{node.x}}, {{node.y}})
+            </div>
+            <div>
+              imagePath={{node.imagePath}}
+            </div>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="edgeEditBoxContainer">
+        <legend>関係の設定</legend>
+        <div style="float:right;margin-right: 5px;">
+          <input type="button" @click="g_appData.createNewEdge()"
+            style="background-image: url('/images/add.png');background-color: rgb(204, 228, 204);width:20px;height:20px"
+            class="iconButton" />
+        </div>
+        <div style="clear: both;"></div>
+
+        <div v-for="value in graph.edges" class="edgeEditBox">
+          <div style="position:absolute;top:2px;right:2px;">
+            <input type="button" class="iconButton" @click="g_appData.duplicateEdge(value);g_appData.updateGraphAuto();"
+              style="height: 20px;padding: 0;margin:0 6px 0 0;vertical-align: top;" value="複製" />
+
+            <input type="button" @click="g_appData.removeEdge(value);g_appData.updateGraphAuto();"
+              style="width:20px;height:20px;background-image: url('/images/remove.png');background-color: #9ccabf;"
+              class="iconButton" />
+          </div>
+
+          <div style="margin-top: 20px;">
+            <div style="display: inline-block; vertical-align: middle;">
+              <span v-if="value.usesSourceText">
+                <input type="text" v-model="value.sourceText" class="manualTextbox"
+                  @change="g_appData.updateGraphAuto()" />
+              </span>
+              <span v-else>
+                <!-- ここを有効にするとエッジの各ノードが選択ボックスによって書き換えられてしまい、エッジが不正になる -->
+
+                <!-- <select2 :options="graph.nodes" v-model="value.source" @input="g_appData.updateGraphAuto()"
+                  class="charOptionSelect">
+                </select2> -->
+              </span>
+            </div>
+            <div style="display: inline-block; vertical-align: middle;">
+              <span v-if="value.usesSourceText">
+                <input type="button" class="editByTextButton" @click="value.usesSourceText = !value.usesSourceText;">
+              </span>
+              <span v-else>
+                <input type="button" class="editByTextButton darken"
+                  @click="value.usesSourceText = !value.usesSourceText;">
+              </span>
+            </div>
+          </div>
+          <div style="padding: 3px;">
+            <select v-model="value.dir" style="font-size: 18px;" @change="g_appData.updateGraphAuto()">
+              <option v-for="option in dirOptions" v-bind:value="option.id">
+                {{ option.text }}
+              </option>
+            </select>
+
+            <input type="text" v-model="value.label" @change="g_appData.updateGraphAuto()"
+              style="vertical-align:text-bottom;width:170px;">
+            <input type="button" @click="g_appData.swapEdgeDirection(value);g_appData.updateGraphAuto();"
+              style="background-image: url('/images/swap.png');width:20px;height:20px" class="iconButton" />
+          </div>
+          <div>
+            <div style="display: inline-block; vertical-align: middle;">
+
+              <span v-if="value.usesDestinationText">
+                <input type="text" v-model="value.destinationText" class="manualTextbox"
+                  @change="g_appData.updateGraphAuto()" />
+              </span>
+              <span v-else>
+                <!-- ここを有効にするとエッジの各ノードが選択ボックスによって書き換えられてしまい、エッジが不正になる -->
+
+                <!-- <select2 :options="graph.nodes" v-model="value.destination" class="charOptionSelect"
+                  @input="g_appData.updateGraphAuto()">
+                </select2> -->
+              </span>
+            </div>
+            <div style="display: inline-block; vertical-align: middle;">
+
+              <span v-if="value.usesDestinationText">
+                <input type="button" class="editByTextButton"
+                  @click="value.usesDestinationText = !value.usesDestinationText;">
+              </span>
+              <span v-else>
+                <input type="button" class="editByTextButton darken"
+                  @click="value.usesDestinationText = !value.usesDestinationText;">
+              </span>
+            </div>
+          </div>
+          <div style="margin-top: 2px;" v-if="graph.layout == 'dot'">
+            <label v-bind:for="'rank' + value.id">
+              <input v-bind:id="'rank' + value.id" type="checkbox" v-model="value.isRankSame"
+                @change="g_appData.updateGraphAuto();">
+              同階層
+            </label>
+          </div>
+          <div style="display: inline-block;background-color: aliceblue;margin: 3px;padding:3px;border: solid 1px #999;"
+            v-if="isDebugModeEnabled">
+            <div>
+              source={{value.source}}, destination={{value.destination}}
+            </div>
+            <div>
+              destinationText="{{value.destinationText}}"
+            </div>
+          </div>
+          <div>
+            id={{value.id}}<br>
+            isSelected={{value.isSelected}}<br>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+    <div>
+      <!--キャラ画像確認用-->
+      <!-- <div v-for="info in characters" style="display:inline-block; text-align: center;"><img
+          v-bind:src="ThumbRoot + info.imageName"><br />{{info.name}}<br />({{info.imageName}})</div> -->
+    </div>
+    <div style="clear: both;float:right">
+      <input id="isDebugModeEnabled" type="checkbox" v-model="isDebugModeEnabled"><label
+        for="isDebugModeEnabled">デバッグモード(開発者用)</label>
+    </div>
+    </p>
+  </div>
+
+  <script type="text/x-template" id="edge-detail-template">
+    <textarea v-model="(value || {}).label"  @change="g_appData.clearSelection();g_appData.updateGraphAuto();"></textarea>
+      <!-- <input type="text" v-model="(value || {}).label" @change="g_appData.updateGraphAuto()"
+           @change="g_appData.clearSelection()"> -->
+  </script>
+
+  <script>
+    function findSvgElem() {
+      let graphRoot = document.getElementById("graph");
+      for (const node of graphRoot.childNodes) {
+        if (node.nodeName == "svg") {
+          return node;
+        }
+      }
+      return null;
+    }
+    function saveGraphAsPng() {
+      console.log("download button clicked");
+      let svgElem = findSvgElem();
+      if (svgElem == null) {
+        console.error("svg element was not found.");
+        return;
+      }
+      svg2imageData(svgElem, function (data) {
+        console.log("creating download url");
+        let downloadEle = document.createElement("a");
+        downloadEle.href = data;
+        downloadEle.download = "FeRelationshipChart.png";
+        downloadEle.click();
+      }, function (error) {
+        console.log(error);
+        alert('failed to convert');
+      });
+    };
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+  <!-- jquery-ui -->
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.min.css" media="print"
+    onload="this.media='all'">
+  <script async src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+
+  <!-- select2 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css"
+    media="print" onload="this.media='all'">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+
+  <!-- vue.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+
+  <!-- 文字列圧縮 -->
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"
+    integrity="sha512-M7nHCiNUOwFt6Us3r8alutZLm9qMt4s9951uo8jqO4UwJ1hziseL6O3ndFyigx6+LREfZqnhHxYjKRJ8ZQ69DQ=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+  <!-- <script src="/node_modules/d3/dist/d3.js"></script> -->
+  <script src="/node_modules/@hpcc-js/wasm/dist/index.js" type="javascript/worker"></script>
+  <script src="/node_modules/d3-graphviz/build/d3-graphviz.js"></script>
+  <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+  <script src="/FehTools/RelationshipChartMaker/Utilities.js?20240622"></script>
+  <script src="/FehTools/RelationshipChartMaker/Graph.js?20250601_3"></script>
+  <script src="/FehTools/RelationshipChartMaker/SqliteDatabase.js?20240202"></script>
+  <script src="/FehTools/RelationshipChartMaker/CharacterInfo.js?20240615_2"></script>
+  <script src="/FehTools/RelationshipChartMaker/Main_DrawByD3.js?20250117"></script>
+  <script src="/FehTools/RelationshipChartMaker/Main.js?20250601"></script>
+  <script src="/FehTools/RelationshipChartMaker/SupportPair.js?20250601_3"></script>
+  <script src="/FehTools/RelationshipChartMaker/BlazingBladeSupportGraph.js?20250601_3"></script>
+
+  <script>
+    function createDialog(elem, title, width = 370, height = 500, positionOf) {
+      elem.dialog({
+        autoOpen: false,
+        modal: false,
+        title: title,
+        width: width,
+        height: height,
+        resizable: true,
+        closeText: "",
+        position: {
+          my: "left top",
+          at: "left top",
+          of: positionOf
+        }
+      });
+    }
+    function showSettingDialog() {
+      $('#settingDialog').dialog('open');
+    }
+
+
+
+    function selectedNodeNameChanged(elem) {
+      if (g_appData.selectedNode != null) {
+        g_appData.updateNodeInfo(g_appData.selectedNode);
+      }
+    }
+    window.addEventListener('load', (event) => {
+      createDialog($("#settingDialog"), "選択アイテムの設定", 270, 270, "#showDialog");
+
+      $("#editSelectedEdgeLabel").keypress(function (e) {
+        if (e.which === 13 && !e.shiftKey) {
+          // Enter 時の挙動
+          e.preventDefault();
+          g_appData.clearSelection();
+          g_appData.updateGraphAuto();
+        }
+        else if (e.which === 10) {
+          // Ctrl+Enter
+          g_appData.selectedEdge.label += '\r\n';
+        }
+      });
+      $("#editSelectedComment").keypress(function (e) {
+        if (e.which === 13 && !e.shiftKey) {
+          // Enter 時の挙動
+          e.preventDefault();
+          g_appData.clearSelection();
+          g_appData.updateGraphAuto();
+        }
+        else if (e.which === 10) {
+          // Ctrl+Enter
+          g_appData.selectedComment.text += '\r\n';
+        }
+      });
+      initMain(null);
+      g_appData.showsCluster = true;
+    });
+  </script>
+</body>
+
+</html>
