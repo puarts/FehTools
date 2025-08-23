@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf8" />
+    <title>未実装キャラリスト</title>
+    <link rel="stylesheet" href="/css/loading.css">
+    <link rel="stylesheet" href="/css/main.css?20181201" type="text/css" />
+</head>
+
+<body style="text-align: left;">
+    <p>FEHに未実装のFEキャラ一覧です。</p>
+    <p>
+        英雄総選挙の投票数が多い順で表示しています。
+        各回ごとの投票数で並び変える事ができます。また、任意の回の累計投票数で並び変えることができます。
+        実装済みキャラの投票数も確認できます。
+    </p>
+    <style>
+        .card {
+            display: inline-block;
+            width: 95px;
+            background-color: #fff;
+            border: 1px solid #999;
+            vertical-align: top;
+            position: relative;
+            text-align: center;
+            border-radius: 10px;
+            margin: 1px;
+        }
+
+        .iconContainer {
+            margin: 0 auto;
+            position: relative;
+            width: fit-content;
+        }
+
+        .textOnImg {
+            pointer-events: none;
+            color: white;
+            position: absolute;
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px;
+        }
+
+        .checkItem {
+            width: fit-content;
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .settingContainer {
+            background-color: #eee;
+            border: solid 1px #999;
+        }
+
+        .settingContainerTitle {
+            background-color: #333;
+            color: white;
+            padding-left: 5px;
+        }
+
+        .settingSubContainer {
+            margin-bottom: 5px;
+            background-color: #fff;
+        }
+
+        .checkboxLabel {
+            display: inline-block;
+            margin: 5px 0;
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="feh_loading_anim"></div>
+
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <details open class="settingContainer">
+            <summary class="settingContainerTitle">条件による絞り込み</summary>
+            <fieldset class="settingSubContainer">
+                <legend>作品</legend>
+                <div v-for="item in displayTitles" class="checkItem">
+                    <label v-bind:for="item.domId">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value"
+                            @change="g_appData.updateFilteredVoteInfos()">
+                        {{item.label.replace("Encore", "")}}
+                    </label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayTitles, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayTitles, false)" value="全てオフ">
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>性別</legend>
+                <div v-for="item in displaySex" class="checkItem">
+                    <label v-bind:for="item.domId">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value"
+                            @change="g_appData.updateFilteredVoteInfos()">
+                        {{item.label}}
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>プレイアブル</legend>
+                <div v-for="item in displayPlayable" class="checkItem">
+                    <label v-bind:for="item.domId">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value"
+                            @change="g_appData.updateFilteredVoteInfos()">
+                        {{item.label}}
+                    </label>
+                </div>
+            </fieldset>
+        </details>
+        <details open class="settingContainer">
+            <summary class="settingContainerTitle">表示設定</summary>
+            <fieldset class="settingSubContainer">
+                <legend>投票数を累計する総選挙</legend>
+                <div v-for="item in displayCyl" class="checkItem">
+                    <label v-bind:for="item.domId">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value"
+                            @change="g_appData.updateFilteredVoteInfos()">
+                        {{item.label.startsWith("cyl") ? "第" + item.label.replace("cyl", "") + "回" : item.label}}
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>その他</legend>
+                表示順位 <select v-model="currentOrderType" @change="g_appData.updateFilteredVoteInfos()">
+                    <option v-for="value in DisplayOrderType" :value="value">
+                        {{DisplayOrderTypeLabel[value]}}
+                    </option>
+                </select>
+                <label for="showsImplementedChar" class="checkboxLabel"><input id="showsImplementedChar" type="checkbox"
+                        v-model="showsImplementedChar" @change="g_appData.updateFilteredVoteInfos()"
+                        style="margin-left:10px">
+                    実装済みキャラも表示</label>
+            </fieldset>
+        </details>
+        <div style="text-align: center;margin: 10px;">
+            {{filteredVoteInfos.length}}件のヒット
+        </div>
+        <div style="margin: 5px 0;">
+            名前検索 <input type="text" v-model="searchName" @input="g_appData.updateDisplayFilteredVoteInfos()" />
+            <label for="isPerfectMatchingNameOnly" class="checkboxLabel"><input id="isPerfectMatchingNameOnly"
+                    type="checkbox" v-model="isPerfectMatchingNameOnly"
+                    @change="g_appData.updateDisplayFilteredVoteInfos()" style="margin-left:10px">
+                完全一致</label>
+        </div>
+        <div>
+            <fieldset class="settingContainer">
+                <legend>
+                    {{g_appData.getAccumulatedCylNameDescription()}}</legend>
+                <div>
+                    <div v-for="(info, index) in displayFilteredVoteInfos" class="card">
+                        <a :href="info.charInfo.url" :title="info.charInfo.name">
+                            <div class="iconContainer">
+                                <img :src="info.charInfo.imagePath" width="80" height="80" loading="lazy"
+                                    onerror="this.src='/images/FehCylPortraits/Unknown.png'" :alt="info.charInfo.name">
+                                <span class="textOnImg" style="top:0;left:0">{{currentOrderType ==
+                                    DisplayOrderType.Total ?
+                                    info.rank : currentOrderType == DisplayOrderType.PerSex ? info.rankSex :
+                                    info.displayRank}}位</span>
+                                <span class="textOnImg" style="bottom:0;right:0">{{info.voteCount}}票</span>
+                                <span class="textOnImg"
+                                    :style="`top:0;right:0;color:${info.titleColor}`">{{info.shortTitleName}}</span>
+                            </div>
+                            <div>
+                                {{info.charInfo.name}}
+                            </div>
+                        </a>
+                        <div style="text-align: left;">
+                            <span v-for="heroInfo in info.heroInfos">
+                                <a :href="'heroInfo.url'+'#main-content'" :title="heroInfo.name">
+                                    <img :src="heroInfo.iconPath" width="30" height="30" loading="lazy"
+                                        :alt="heroInfo.name">
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+
+    <!-- vue.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <script src="/FehTools/RelationshipChartMaker/Utilities.js?20240104"></script>
+    <script src="/FehTools/RelationshipChartMaker/SqliteDatabase.js?20240104"></script>
+    <script src="/FehTools/RelationshipChartMaker/CharacterInfo.js?20240620"></script>
+    <script src="/FehTools/TierList/HeroInfo.js?20240620_1"></script>
+    <script src="/FehTools/UnimplementedCharList/Main.js?20240620_1"></script>
+
+    <script>
+        window.addEventListener('load', (event) => {
+            initMain(() => {
+                const loader = document.getElementById("loader");
+                loader.style.display = "none";
+                const app = document.getElementById("app");
+                app.style.display = "";
+            });
+        });
+    </script>
+</body>
+
+</html>
