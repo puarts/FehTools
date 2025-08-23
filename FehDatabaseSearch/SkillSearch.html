@@ -1,0 +1,288 @@
+<meta charset="utf8" />
+<html>
+
+<head>
+  <link rel="stylesheet" href="/css/main.css?20201219">
+  <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+  <p>
+    FEHの全スキル(下位スキルを除く)を指定の条件で検索して一覧する事ができます。
+    例えば、効果に任意の文字列を含むスキルを一覧したり、威力順でスキルを並べ替えるなどができます。
+  </p>
+  <script>
+    const g_loadingBeginTime = Date.now();
+  </script>
+
+  <script src="/js/jquery-3.7.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+  <script src="/js/sql.js/dist/sql-wasm.js"></script>
+  <script async src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+  <!-- <script src='https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.5.0/sql-wasm.js'></script> -->
+
+  <!-- rasterizehtml -->
+  <script src="/js/rasterizeHTML.allinone.js"></script>
+
+
+  <script src="/FehTools/FehDatabaseSearch/Common.js?20240525"></script>
+  <script src="/FehTools/FehDatabaseSearch/SkillAppData.js?20240819"></script>
+  <style>
+    .buttonDefault {
+      width: 100;
+      margin: 5px;
+    }
+
+    .detailsDefault {
+      padding: 5px;
+      border: solid 1px #999;
+      background-color: #f9f9f9;
+      padding-top: 10;
+    }
+
+    .divDefault {
+      padding-top: 5;
+    }
+
+    .detailSummary {
+      padding: 5px;
+      border: solid 1px #999;
+      background-color: #ddd;
+    }
+
+    .skillDescription {
+      font-size: 12px;
+    }
+
+    .checkboxDefult {}
+  </style>
+  <div class="sk-fading-circle" id="loader">
+    <div class="feh_loading_anim"></div>
+    <div class=" sk-circle1 sk-circle"></div>
+    <div class="sk-circle2 sk-circle"></div>
+    <div class="sk-circle3 sk-circle"></div>
+    <div class="sk-circle4 sk-circle"></div>
+    <div class="sk-circle5 sk-circle"></div>
+    <div class="sk-circle6 sk-circle"></div>
+    <div class="sk-circle7 sk-circle"></div>
+    <div class="sk-circle8 sk-circle"></div>
+    <div class="sk-circle9 sk-circle"></div>
+    <div class="sk-circle10 sk-circle"></div>
+    <div class="sk-circle11 sk-circle"></div>
+    <div class="sk-circle12 sk-circle"></div>
+  </div>
+  <div id="app" style="text-align: left; display: none;">
+    <p><b>
+        <span v-html="initMessage"></span>
+      </b>
+    </p>
+    <details open class="detailsDefault">
+      <summary class="detailSummary">条件による絞り込み</summary>
+      <fieldset v-for="category in searchTextInfoCategories" style="background-color: white;padding:0">
+        <legend>{{category.label}}</legend>
+        <span style="display: inline-block;margin:3px;" v-for="(searchTextInfo, index) in category.searchTextInfos">
+          <label>
+            <input v-bind:name="category.label" type="checkbox" v-model="searchTextInfo.isEnabled"
+              class="checkboxDefult" @change="conditionChanged" v-if="category.uiType == UiType.Checkbox">
+            <input v-bind:name="category.label" type="radio" v-model="category.selectedSearchTextInfoIndex"
+              class="checkboxDefult" v-bind:value="index" @change="conditionChanged"
+              v-else-if="category.uiType == UiType.Radio">
+            <span v-html="searchTextInfo.label"></span>
+          </label>
+        </span>
+        <div class="divDefault" v-if="category.uiType == UiType.Checkbox">
+          <input type="button" value="全てオン" class="buttonDefault" @click="enableAllTextSearchInfoInCategory(category)">
+          <input type="button" value="全てオフ" class="buttonDefault" @click="disableAllTextSearchInfoInCategory(category)">
+        </div>
+      </fieldset>
+    </details>
+    <details open class="detailsDefault">
+      <summary class="detailSummary">文字列検索</summary>
+      <p style="font-size:12px">検索ボックスにスペース区切りで複数の文字列を入力すると「または」扱いになります。&gt;=5
+        のように入力すると5以上の値を検索します。&gt;、&gt;=、&lt;、&lt;=の４つの演算子が使用可能です。演算子と数値の間にスペースをいれてはいけません。
+      </p>
+      <div class="divDefault">
+        <input type="button" value="条件追加" @click="addCondition" class="buttonDefault" />
+        <input type="button" value="条件削除" @click="removeCondition" class="buttonDefault"
+          v-bind:disabled="isRemoveConditionButtonDisabled" />
+        <input type="button" @click="clearSearchTexts" class="buttonDefault" value="文字クリア">
+      </div>
+      <div v-for="(searchTextInfo, index) in searchTextInfos" class="divDefault">
+        <span v-if="index != 0">
+          <select v-model="searchTextInfo.logicalOperationType" @change="conditionChanged">
+            <option v-for="option in LogicalOperationTypeOptions" v-bind:value="option.id">
+              {{ option.label }}
+            </option>
+          </select>
+        </span>
+        <select v-model="searchTextInfo.targetColumn" @change="conditionChanged">
+          <option v-for="option in columnInfos" v-bind:value="option.name">
+            {{ option.label }}
+          </option>
+        </select>
+        に
+        <input type="text" v-model="searchTextInfo.searchText" @input="conditionChanged" style="width: 120;" />
+        を
+        <select v-model="searchTextInfo.searchType" @change="conditionChanged">
+          <option v-for="option in SearchTypeOptions" v-bind:value="option.id">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+    </details>
+    <details style="padding: 5;" class="detailsDefault" open>
+      <summary class="detailSummary">検索結果の表示項目</summary>
+      <div class="divDefault">
+        <span v-for="info in columnInfos" v-if="info.isAvailableOnDatabase">
+          <label style="display: inline-block;padding:3px">
+            <input type="checkbox" v-model="info.isVisible" v-bind:disabled="info.isKeyColumn" class="checkboxDefult"
+              @change="conditionChanged">
+            {{info.label}}
+          </label>
+        </span>
+      </div>
+      <div class="divDefault">
+        <input type="button" value="全てオン" @click="showAllColumns" class="buttonDefault" />
+        <input type="button" value="全てオフ" @click="hideAllColumns" class="buttonDefault" />
+      </div>
+    </details>
+    <details style="display:none;padding: 5;" class="detailsDefault">
+      <summary class="detailSummary">検索結果の共有</summary>
+      以下のURLで検索結果を再現する事ができます。<br />
+      <input type="button" value="コピー" @click="copyUrl">
+      <br />
+      <textarea id="urlTextArea" v-model="currentUrl" style="width: 400px;height: 50px;" readonly></textarea>
+    </details>
+    <div style="display: none;">
+      <input type="button" value="検索" style="width: 100;" v-bind:disabled="isAutoSearchEnabled">
+      <label>
+        <input type="checkbox" v-model="isAutoSearchEnabled" class="checkboxDefult">
+        条件変更時に即時検索
+      </label>
+      <p>
+        <br />
+        <textarea v-model="currentQuery" style="width: 400;height: 50;" disabled></textarea>
+        <br />
+        <textarea v-model="currentSetting" style="width: 400;height: 50;" disabled></textarea>
+        <br />
+        文字数: {{this.currentUrl.length}}
+      </p>
+    </div>
+
+    <div style="clear:both;padding:5;margin-top:10px;">
+      {{!g_appData.isResultEmpty ? queryResult[0].values.length :
+      0}}件の検索結果({{queryMilliseconds}}ミリ秒)
+    </div>
+    <input type="button" value="表を画像としてダウンロード" onclick="saveAsImage('r');" v-bind:disabled="g_appData.isResultEmpty">
+
+    <div id="resultArea" style="clear:both;padding:5;">
+      <table border=" 1" id="r">
+      </table>
+    </div>
+
+  </div>
+  <script>
+
+    let g_appData = new AppData();
+    let vm = new Vue({
+      el: "#app",
+      data: g_appData,
+      methods: {
+        conditionChanged: function () {
+          if (!g_appData.isAutoSearchEnabled) {
+            return;
+          }
+
+          this.updateTable();
+        },
+        updateTable: function () {
+          let table = document.getElementById("r");
+          g_appData.updateQueryResultTable(table);
+        },
+        addCondition: function () {
+          g_appData.addSearchTextInfo();
+        },
+        removeCondition: function () {
+          g_appData.removeSearchTextInfo();
+          this.updateTable();
+        },
+        showAllColumns: function () {
+          g_appData.showAllColumns();
+          this.updateTable();
+        },
+        hideAllColumns: function () {
+          g_appData.hideAllColumns();
+          this.updateTable();
+        },
+        enableAllTextSearchInfoInCategory: function (category) {
+          g_appData.setAllTextSearchInfoEnabledInCategory(category, true);
+          this.updateTable();
+        },
+        disableAllTextSearchInfoInCategory: function (category) {
+          g_appData.setAllTextSearchInfoEnabledInCategory(category, false);
+          this.updateTable();
+        },
+        clearSearchTexts: function () {
+          g_appData.clearSearchTexts();
+          this.updateTable();
+        },
+        copyUrl: function () {
+          let textarea = $("#urlTextArea")[0];
+          textarea.select();
+          textarea.setSelectionRange(0, 99999); /*For mobile devices*/
+          document.execCommand("copy");
+        },
+        importUrl: function (url) {
+          let splited = url.split("s=");
+          if (splited.length != 2) {
+            console.log(`invalid url "${url}"`);
+            return;
+          }
+
+          let compressedSetting = splited[1];
+          g_appData.fromCompressedString(compressedSetting);
+          this.updateTable();
+        }
+      }
+    });
+
+    function importUrlImpl() {
+      try {
+        vm.updateTable();
+        let url = location.search;
+        vm.importUrl(url);
+      }
+      catch (e) {
+        // エラーメッセージをページに表示するとGoogleに別ページとしてインデックス登録されてしまうので出せない
+        // const errorMessage = e.stack.replaceAll("\n", "<br/>");
+        const errorMessage = "検索結果の再現に失敗しました";
+        g_appData.initMessage = `<span style='color:red'>${errorMessage}</span>`;
+        console.error(e);
+      }
+    }
+    function switchLoading() {
+      const loader = document.getElementById("loader");
+      loader.style.display = "none";
+      const app = document.getElementById("app");
+      app.style.display = "";
+      const diff = Date.now() - g_loadingBeginTime;
+      g_appData.setInitMessage(diff);
+    }
+
+    window.addEventListener('load', (event) => {
+      g_appData.initDatabase(() => {
+        g_appData.initUi();
+        importUrlImpl();
+        if (document.readyState === 'ready' ||
+          document.readyState === 'complete') {
+          switchLoading();
+        } else {
+          switchLoading();
+        }
+      });
+    });
+
+  </script>
+</body>
+
+</html>
