@@ -1,0 +1,7 @@
+.vs
+packages
+x64
+Debug
+Release
+Outputs
+*.user
