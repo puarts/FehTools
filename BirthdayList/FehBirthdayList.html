@@ -1,0 +1,224 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>
+        FEキャラの誕生日一覧です。覚醒、if、幻影異聞録＃FE、風花雪月、エンゲージのキャラを表示してます。もし漏れがあった場合、コメントで教えていただければ対応します。
+    </p>
+    <p>
+        テーブル表示で一覧したい場合は <a href="https://www.fire-emblem.fun/?pid=1749#main-content">FEシリーズ原作キャラ一覧</a> で確認できます。
+    </p>
+    <style>
+        .iconHidden {
+            visibility: hidden;
+            width: 0;
+        }
+
+        .checkStyle {
+            display: block;
+            float: left;
+            margin: 5px;
+        }
+
+        .charIcon {
+            margin-right: 5px;
+        }
+
+        .textShadow {
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="feh_loading_anim"></div>
+
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+
+        <details style="margin: 10px;" open>
+            <summary>詳細設定</summary>
+            <fieldset>
+                <legend>作品で絞り込み</legend>
+                <div v-for="item in displayOrigin" class="checkStyle">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateIcons"><label
+                        v-bind:for="item.domId">
+                        {{item.label}}
+                    </label>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>その他</legend>
+                <input id="showsName" type="checkbox" v-model="showsName"><label for="showsName">名前を表示</label>
+            </fieldset>
+        </details>
+
+        <fieldset v-for="month in Object.keys(monthToCharInfos)">
+            <legend>{{month}}月</legend>
+
+            <div v-for="info in monthToCharInfos[month]"
+                style="vertical-align: top; text-align: center;margin:2px;display:inline-block">
+                <a v-bind:href="info.url" v-bind:title="`${info.name}の詳細`">
+                    <div style="position:relative;text-align: right;" class="unitIcon if">
+                        <img class="" v-bind:src="info.thumbUrl" onerror="onImgError(this)"
+                            v-bind:altImg="info.alterThumbUrl" loading="lazy" v-bind:alt="`${info.name}の画像`"
+                            height="60">
+                        <span class="textShadow" style="font-size:12px;color:white;position:absolute;bottom:0;right:0;">
+                            {{info.month}}/{{info.day}}
+                        </span>
+                        <span class="textShadow" style="font-size:12px;position:absolute;top:0;right:0;">
+                            <span v-bind:style="`color:${getOriginColor(info.shortOriginName)}`">
+                                {{info.shortOriginName}}
+                            </span>
+                        </span>
+                    </div>
+                    <span v-if="showsName" style="display:inline-block;font-size:12px;width:60px">
+                        {{info.name}}
+                    </span>
+                </a>
+            </div>
+            <!-- 
+            <a v-for="info in monthToCharInfos[month]" v-bind:href="url" v-bind:title="`${info.name}の詳細`">
+                <div style="float:left;position:relative;" class="unitIcon if">
+                    <img
+                        src="https://fire-emblem.fun/images/FehCylPortraits/CYL_Asugi_Fates.png" class=""
+                        data-src="https://fire-emblem.fun/images/FehCylPortraits/CYL_Asugi_Fates.png" alt="グレイ の画像" width="60"
+                        height="60"><span
+                        style="color:white;position:absolute;bottom:0;right:0;text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px,#444 1px -1px 0px, #444 -1px -1px 0px,#444 0px 1px 0px, #444 0px -1px 0px,#444 -1px 0px 0px, #444 1px 0px 0px">1/1</span><span
+                        style="color:white;position:absolute;top:0;right:0;text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px,#444 1px -1px 0px, #444 -1px -1px 0px,#444 0px 1px 0px, #444 0px -1px 0px,#444 -1px 0px 0px, #444 1px 0px 0px"><span
+                            style="color:white">if</span></span>
+                    {{info.name}}
+                </div>
+            </a> -->
+        </fieldset>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <script>
+        function onImgError(target) {
+            target.src = target.getAttribute("altImg");
+        }
+
+        let g_appData = null;
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let reloadSuffix = "20240107";
+            let scriptFileName = scriptFileNames[index];
+            let src = scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener("load", function (e) {
+            const startTime = Date.now();
+            loadScripts([
+                "/FehTools/RelationshipChartMaker/Utilities.js",
+                "/FehTools/TierList/Utilities.js",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/BirthdayList/FehBirthdayListApp.js",
+            ], () => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load all scripts`);
+
+
+                // select2 を使うためのVueコンポーネント
+                Vue.component('select2', {
+                    template: '<select><slot></slot></select>',
+                    props: {
+                        options: Array,
+                        value: Number,
+                    },
+
+                    mounted: function () {
+                        $(this.$el)
+                            // init select2
+                            .select2({ data: this.options })
+                            .val(this.value)
+                            .trigger('change')
+                            .on('change', (event) =>
+                                this.$emit('input', parseInt(event.target.value, 10))
+                            )
+                    },
+                    watch: {
+                        value: function (val) {
+                            $(this.$el).val(val).trigger('change');
+                        },
+                        // update options
+                        options: function (options) {
+                            let value = this.value;
+                            $(this.$el)
+                                .empty()
+                                .select2({ data: options })
+                                .val(value)
+                                .trigger('change');
+                        }
+                    },
+                    destroyed: function () {
+                        $(this.$el).off().select2('destroy')
+                    },
+                });
+
+
+                g_appData = new AppData();
+                const app = new Vue({
+                    data: g_appData,
+                    el: "#app",
+                    methods: {
+                        updateIcons() {
+                            g_appData.updateDisplayIcons();
+                        },
+                    },
+                    mounted: () => {
+                        // コンポーネントがマウントされた後に実行される処理を記述します
+                        g_appData.init(() => {
+                            const loader = document.getElementById("loader");
+                            loader.style.display = "none";
+                            const app = document.getElementById("app");
+                            app.style.display = "";
+                        });
+                    }
+                });
+            });
+        });
+
+    </script>
+</body>
+
+</html>
