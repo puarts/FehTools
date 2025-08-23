@@ -1,0 +1,404 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>FEHのキャラ実装数の推移を色々なカテゴライズでグラフ化できます。例えば、原作タイトル毎のキャラ実装数推移、兵種毎のキャラ実装数推移など。</p>
+    <style>
+        .checkItem {
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .metaInfo {
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px;
+            pointer-events: none;
+            color: white;
+            position: absolute;
+        }
+
+
+        html,
+        body {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-container .chart-title {
+            font-size: 18px;
+            /* fill: #d3d3d3; */
+            font-weight: bold;
+            text-anchor: start;
+            dominant-baseline: middle;
+        }
+
+        .chart-container .chart-subtitle {
+            font-size: 18px;
+            /* fill: #d3d3d3; */
+            font-weight: bold;
+            text-anchor: start;
+            dominant-baseline: middle;
+        }
+
+        .chart-container .current-date {
+            font-size: 25px;
+            /* fill: #d3d3d3; */
+            text-anchor: end;
+        }
+
+        .y-axis text,
+        .y-axis .domain,
+        .x-axis .domain {
+            display: none;
+        }
+
+        .x-axis .tick line {
+            color: #939393;
+        }
+
+        .x-axis .tick text {
+            color: #939393;
+        }
+
+        .columns .column-container .column-rect {
+            /* fill: tomato; */
+        }
+
+        .columns .column-container .column-title {
+            text-anchor: end;
+            /* fill: white; */
+            dominant-baseline: middle;
+            font-size: 14px;
+        }
+
+        .columns .column-container .column-value {
+            dominant-baseline: middle;
+            font-size: 14px;
+        }
+
+        .settingGroupSummary {
+            background-color: #444;
+            color: white;
+            padding: 2px 5px 2px 5px
+        }
+
+        .settingGroupDetail {
+            background-color: #eee;
+            padding: 1px
+        }
+
+        .settingGroupInner {
+            padding: 5px
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+
+        <details class="settingGroupDetail" open>
+            <summary class="settingGroupSummary">基本設定</summary>
+            <div class="settingGroupInner">
+                <select v-model="displayTarget" @change="changeTarget">
+                    <option v-for="(value, key) in DisplayTarget" v-bind:value="value">
+                        {{getDisplayTargetLabel(value)}}</option>
+                </select>毎のキャラ実装数推移を表示
+            </div>
+        </details>
+
+        <!-- <select v-model="displayMode">
+            <option v-for="(value, key) in DisplayMode" v-bind:value="value">
+                {{getDisplayModeLabel(value)}}</option>
+        </select> -->
+
+        <details class="settingGroupDetail">
+            <summary class="settingGroupSummary">詳細設定</summary>
+            <div class="settingGroupInner">
+                <label for="showsZeroColumn"><input id="showsZeroColumn" type="checkbox" @change="changeTarget"
+                        v-model="showsZeroColumn">0の項目を表示</label>
+                <dl>
+                    <dt>再生間隔(ms):</dt>
+                    <dd><input type="number" v-model="chartSettings.duration"></dd>
+                    <dt>再生範囲:</dt>
+                    <dd>
+                        <div id="playRangeSlider" style="margin: 3px 30px 3px 0px"></div>
+                    </dd>
+                </dl>
+            </div>
+            <fieldset>
+                <legend>種類</legend>
+                <div v-for="item in displayHowToGet" class="checkItem">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="changeTarget"><label
+                        v-bind:for="item.domId">{{item.label}}</label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayHowToGet, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayHowToGet, false)" value="全てオフ">
+                </div>
+            </fieldset>
+
+        </details>
+        <div style="display: none;">
+            {{columnCount}}列
+        </div>
+
+        <div v-show="displayMode == DisplayMode.BarChart">
+            <div style="margin: 10px 0px;">
+                <input type="button" @click="startPlay" v-bind:value="isPlaying?'停止':'再生'"
+                    style="width: 80px; height: 30px;">
+                <input type="range" min="0" v-bind:max="chartDataset.length - 1" v-model="currentTimeIndex"
+                    style="width:330px;vertical-align:middle;" @input="changeDate">
+                {{chartDataset[currentTimeIndex]?.date}}
+            </div>
+            <div>
+                <svg id="bar-chart-race" style="border: solid 0px black;">
+                    <g class="chart-container">
+                        <text class="chart-subtitle"></text>
+                        <text class="chart-title"></text>
+                        <g class="x-axis"></g>
+                        <g class="y-axis"></g>
+                        <g class="columns"></g>
+                        <text class="current-date"></text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+        <!-- <div v-show="displayMode == DisplayMode.TableHorizontal">
+            <table border="1">
+                <tr>
+                    <th>日付</th>
+                    <th v-for="item in chartDataset">{{item.date}}</th>
+                </tr>
+                <tr v-for="(name, index) in columnNames">
+                    <th>{{name}}</th>
+                    <td v-for="item in chartDataset">
+                        {{item.dataSet[index].value}}
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div v-show="displayMode == DisplayMode.TableVertical">
+            <table border="1">
+                <tr>
+                    <th>日付</th>
+                    <th v-for="name in columnNames">{{name}}</th>
+                </tr>
+                <tr v-for="item in chartDataset">
+                    <th>{{item.date}}</th>
+                    <td v-for="data in item.dataSet">
+                        {{data.value}}
+                    </td>
+                </tr>
+            </table>
+        </div> -->
+
+    </div>
+
+    <script src="/js/jquery-3.7.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <!-- select2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+
+    <!-- d3.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"
+        integrity="sha512-M7nHCiNUOwFt6Us3r8alutZLm9qMt4s9951uo8jqO4UwJ1hziseL6O3ndFyigx6+LREfZqnhHxYjKRJ8ZQ69DQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- jquery-ui -->
+    <!-- <link type="text/css" rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.min.css"> -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+
+    <!-- jQDateRangeSlider -->
+    <link rel="stylesheet" href="/js/jQRangeSlider-5.8.2/css/iThing.css" type="text/css" />
+    <script src="/js/jQRangeSlider-5.8.2/jQDateRangeSlider-min.js"></script>
+
+
+    <script>
+        let g_appData = null;
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let reloadSuffix = "20250823";
+            let scriptFileName = scriptFileNames[index];
+            let src = scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener("load", function (e) {
+            const startTime = Date.now();
+            loadScripts([
+                "/FehTools/TierList/Utilities.js",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/FehStatistics/DataGenerator.js",
+                "/FehTools/FehStatistics/BarChartRace.js",
+                "/FehTools/FehStatistics/FehStatisticsApp.js",
+            ], () => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load all scripts`);
+
+
+                // select2 を使うためのVueコンポーネント
+                Vue.component('select2', {
+                    template: '<select><slot></slot></select>',
+                    props: {
+                        options: Array,
+                        value: Number,
+                    },
+
+                    mounted: function () {
+                        $(this.$el)
+                            // init select2
+                            .select2({ data: this.options })
+                            .val(this.value)
+                            .trigger('change')
+                            .on('change', (event) =>
+                                this.$emit('input', parseInt(event.target.value, 10))
+                            )
+                    },
+                    watch: {
+                        value: function (val) {
+                            $(this.$el).val(val).trigger('change');
+                        },
+                        // update options
+                        options: function (options) {
+                            let value = this.value;
+                            $(this.$el)
+                                .empty()
+                                .select2({ data: options })
+                                .val(value)
+                                .trigger('change');
+                        }
+                    },
+                    destroyed: function () {
+                        $(this.$el).off().select2('destroy')
+                    },
+                });
+
+
+                /** @type {BarChartRace} */
+                let g_chart = null;
+                g_appData = new AppData();
+                const g_renderCallback = index => {
+                    g_appData.currentTimeIndex =
+                        index == g_appData.chartDataset.length ? 0 : index;
+                };
+                const app = new Vue({
+                    data: g_appData,
+                    el: "#app",
+                    methods: {
+                        updateRanks() {
+                            g_appData.updateStatistics();
+                        },
+                        setBoolOptions(target, value) {
+                        },
+                        syncWeaponsFromColors(id, value) {
+                        },
+                        changeTarget() {
+                            d3.select("button").text("Play");
+                            g_appData.updateStatistics();
+                            g_chart
+                                .setTitle(g_appData.getGraphTitle(), g_appData.getGraphSubtitle())
+                                .clearDatasets()
+                                .addDatasets(g_appData.chartDataset)
+                                .renderUnit(0, g_renderCallback);
+                        },
+                        changeDate() {
+                            g_appData.isPlaying = false;
+                            g_chart.renderUnit(g_appData.currentTimeIndex);
+                        },
+                        startPlay() {
+                            if (g_appData.isPlaying) {
+                                g_appData.isPlaying = false;
+                                g_chart.stop();
+                            } else {
+                                g_appData.isPlaying = true;
+                                g_chart.render(Number(g_appData.currentTimeIndex), g_renderCallback);
+                            }
+
+                        }
+                    },
+                    mounted: () => {
+                        // コンポーネントがマウントされた後に実行される処理を記述します
+                        g_appData.init(() => {
+                            const loader = document.getElementById("loader");
+                            loader.style.display = "none";
+                            const app = document.getElementById("app");
+                            app.style.display = "";
+
+                            $("#playRangeSlider").dateRangeSlider(
+                                {
+                                    bounds: {
+                                        min: g_appData.dateMin,
+                                        max: g_appData.dateMax
+                                    },
+                                    defaultValues: {
+                                        min: g_appData.beginDate,
+                                        max: g_appData.endDate
+                                    },
+                                    step: {
+                                        months: 1
+                                    },
+                                    formatter: function (val) {
+                                        const month = val.getMonth() + 1;
+                                        const year = val.getFullYear();
+                                        return year + "/" + month;
+                                    }
+                                })
+                                .bind("valuesChanged", function (e, data) {
+                                    g_appData.beginDate = data.values.min;
+                                    g_appData.endDate = data.values.max;
+                                    g_appData.updateStatistics();
+
+                                    g_chart = new BarChartRace("bar-chart-race");
+                                    g_chart.setTitle(g_appData.getGraphTitle(), g_appData.getGraphSubtitle())
+                                        .addDatasets(g_appData.chartDataset)
+                                        .renderUnit(0, g_renderCallback);
+
+                                });
+                        });
+                    }
+                });
+            });
+        });
+
+    </script>
+</body>
+
+</html>
