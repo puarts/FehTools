@@ -1,0 +1,1339 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/main.css?20181201" type="text/css" />
+</head>
+
+<body style="text-align: left;">
+    <p>FEH 風のキャラアイコンを作成するツールです。</p>
+    <p>好きな画像を選択して、サンプル画像のようにアイコンにしたい領域を切り出してください。後はアイコンに載せる要素を選択すれば完成です。完成したアイコンは画像としてデバイスに保存して下さい。</p>
+
+    <link rel="stylesheet" type="text/css" media="all"
+        href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.6/cropper.css" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.6/cropper.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+
+
+    <style>
+        @font-face {
+            font-family: 'WebSubset_GenEiLateMinN';
+            src: url('/font/GenEiLateMinN_v2.woff') format('woff'),
+                url('/font/GenEiLateMinN_v2.ttf') format('truetype');
+        }
+
+        dt.m80 {
+            float: left;
+            clear: left;
+        }
+
+
+        dd.m80 {
+            margin-left: 60px;
+            padding: 3px;
+        }
+
+        ul {
+            margin: 0;
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+        }
+
+        .tabs {
+            overflow: hidden;
+        }
+
+        .tabs li,
+        .tabs label {
+            float: left;
+            font-size: 10px;
+            padding: 5px;
+            width: 50px;
+            text-align: center;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            transition: .3s;
+        }
+
+        .tabs li.active,
+        .tabs :checked+label {
+            background-color: #000;
+            border-color: #000;
+            color: #fff;
+            cursor: auto;
+        }
+
+        .contents {
+            overflow: hidden;
+            margin-top: -1px;
+        }
+
+        .contents li {
+            /* width: 320px; */
+            /* padding: 20px; */
+            border: 1px solid #ccc;
+        }
+
+        .jquery .contents li {
+            display: none;
+        }
+
+        .jquery .contents li.active {
+            display: block;
+        }
+
+        .vue_radio input {
+            display: none;
+        }
+
+        .tabContent {
+            padding: 10px;
+        }
+
+        .arrowButton {
+            border-style: none;
+            background-color: transparent;
+            width: 30px;
+            height: 30px;
+            background-size: 100%;
+        }
+
+        .box {
+            display: table-cell;
+            vertical-align: middle;
+
+            background-color: #66b6d5;
+            width: 300px;
+            height: 200px;
+        }
+    </style>
+    <div id="app">
+        <p style="color: blue;">
+            {{message}}
+        </p>
+
+        <p>
+            <input type="file" id="uploader">
+        </p>
+        <div id="cropperContainer">
+            <img src="/FehTools/FehIconMaker/images/Byleth_NoBg.png" id="sourceCanvas" style="width: 100%;" />
+        </div>
+        <!-- <canvas id="sourceCanvas" width="1" height="1"></canvas> -->
+        <div>
+            <dl style="font-size: 12px;">
+                <dt class="m80">タイプ:</dt>
+                <dd class="m80">
+                    <label v-for="(item) in IconType">
+                        <input type="radio" name="iconType" v-bind:value="item" v-model="iconType"
+                            @change="iconTypeChanged" />
+                        {{iconTypeToString(item)}}
+                    </label>
+                </dd>
+                <dt class="m80">サイズ:</dt>
+                <dd class="m80">
+                    <label v-for="(item) in IconSizeType">
+                        <input type="radio" name="iconSizeType" v-bind:value="item" v-model="iconSizeType"
+                            @change="sizeChanged" />
+                        {{iconSizeToString(item)}}
+                    </label>
+                </dd>
+            </dl>
+
+            <div v-bind:style="'text-align:center;float:left; background-color:'+previewBgColor">
+                <img id="resultImg">
+            </div>
+            <div style="float:left; padding:10px;">
+                <div style="width: 88px;text-align: center; ">
+                    <div>
+                        <input type="button" @click="moveCropBox(0, -2)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehIconMaker/images/Arrow_Up.png'); ">
+                    </div>
+                    <div style="float:left; ">
+                        <input type="button" @click="moveCropBox(-2, 0)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehIconMaker/images/Arrow_Left.png');">
+                    </div>
+                    <div style=" font-size:12px;clear:none; float:left;margin-top: 5px;">
+                        位置</div>
+
+                    <div style="float:right;clear: none; ">
+                        <input type="button" @click="moveCropBox(2, 0)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehIconMaker/images/Arrow_Right.png');">
+                    </div>
+                    <div style="clear:both;">
+                        <input type="button" @click="moveCropBox(0, 2)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehIconMaker/images/Arrow_Down.png'); ">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <ul class="tabs" style="clear:both">
+            <li v-for="(item, index) in TabLabels" v-on:click="changeTab(item.id)"
+                v-bind:class="{'active': activeTabIndex === item.id}">{{item.label}}</li>
+        </ul>
+        <ul class="contents">
+            <li v-show="activeTabIndex === TabId.Rarity">
+                <div class="tabContent">
+                    <label v-for="(item) in Rarity">
+                        <input type="radio" name="rarity" v-bind:value="item" v-model="rarity" @change="inputChanged" />
+                        {{rarityToString(item)}}
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Weapon">
+                <div class="tabContent">
+                    <label v-for="(item, index) in weaponTypeIcons">
+                        <input type="radio" name="weaponType" v-bind:value="index" v-model="currentWeaponTypeIndex"
+                            @change="inputChanged" />
+                        <img v-if="index > 0" v-bind:src="imageRoot + '/' + item + '.png'" width="25px" />
+                        <span v-else>なし</span>
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Move">
+                <div class="tabContent">
+                    <label v-for="(item, index) in moveTypeIcons2">
+                        <input type="radio" name="moveType" v-bind:value="index" v-model="currentMoveTypeIndex"
+                            @change="inputChanged" />
+                        <img v-if="index > 0" v-bind:src="imageRoot + '/MoveType-' + item + '.png'" width="25px">
+                        <span v-else>なし</span>
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Blessing">
+                <div class="tabContent">
+                    <label v-for="(item) in SeasonType">
+                        <input type="radio" name="blessing" v-bind:value="item" v-model="blessing"
+                            @change="inputChanged" />
+                        <img v-if="item != SeasonType.None"
+                            v-bind:src="imageRoot + '/Season_' + getKeyByValue(SeasonType, item) + '.png'" width="25px">
+                        <span v-else>なし</span>
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Favorite">
+                <div class="tabContent">
+                    <label v-for="(item) in FavoriteMark">
+                        <input type="radio" name="favoriteMark" v-bind:value="item" v-model="favoriteMark"
+                            @change="inputChanged" />
+                        <img v-if="item != FavoriteMark.None" v-bind:src="imageRoot + '/Favorite' + item + '.png'"
+                            width="20">
+                        <span v-else>なし</span>
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Detail">
+                <div class="tabContent">
+                    <label v-for="(item) of DisplayItem">
+                        <input type="radio" name="level" v-bind:value="item" v-model="displayItem"
+                            @change="inputChanged" />
+                        {{displayItemToString(item)}}
+                    </label>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Text">
+                <div class="tabContent">
+                    <p>
+                        <textarea id="overlayText" name="overlayText" v-model="overlayText" style="width:100%; "
+                            rows="3" @input="inputChanged" placeholder="アイコン上のテキストを入力してください。"></textarea>
+                    </p>
+                    <p>
+                        <label>
+                            <input type="checkbox" v-model="isImageDrawingDisabled" @change="inputChanged" />
+                            画像表示をオフ</label>
+                    </p>
+                    <dl>
+                        <dt>位置:</dt>
+                        <dd>
+                            <input type="number" step="0.05" min="0" max="1" v-model="overlayTextPosXRatio"
+                                @input="inputChanged">
+                            <input type="number" step="0.05" min="0" max="1" v-model="overlayTextPosYRatio"
+                                @input="inputChanged">
+                        </dd>
+                        <dt>フォント:</dt>
+                        <dd>
+                            <label v-for="item in FontKind">
+                                <input type="radio" name="fontKind" v-bind:value="item.value" v-model="fontKind"
+                                    @change="inputChanged" />
+                                {{item.label}}
+                            </label>
+                        </dd>
+                        <dt>フォント色:</dt>
+                        <dd>
+                            <input type="color" v-model="fontColor" @input="inputChanged">
+                        </dd>
+                        <dt>フォントサイズ:</dt>
+                        <dd>
+                            <input type="number" step="1" min="8" max="100" v-model="fontSize" @input="inputChanged">
+                        </dd>
+                        <dt>線の色:</dt>
+                        <dd>
+                            <input type="color" v-model="fontStrokeColor" @input="inputChanged">
+                        </dd>
+                        <dt>線の太さ:</dt>
+                        <dd>
+                            <input type="number" step="1" min="0" max="20" v-model="fontLineWidth"
+                                @input="inputChanged">
+                        </dd>
+                    </dl>
+                </div>
+            </li>
+            <li v-show="activeTabIndex === TabId.Other">
+                <div class="tabContent">
+                    <dl>
+                        <dt>プレビュー背景色:</dt>
+                        <dd>
+                            <input type="color" v-model="previewBgColor">
+                        </dd>
+                        <dt v-if="iconType==IconType.Blog">ボーダー幅:</dt>
+                        <dd v-if="iconType==IconType.Blog">
+                            <input type="number" v-model="borderThickness" @change="inputChanged" min="0">
+                        </dd>
+                    </dl>
+                </div>
+            </li>
+        </ul>
+
+
+        <fieldset v-if="false">
+            <legend>デバッグ</legend>
+            <p>
+                補間モード: <label v-for="(item) of InterporationMode">
+                    <input type="radio" name="interporationMode" v-bind:value="item" v-model="interporationMode"
+                        @change="inputChanged" />
+                    {{getKeyByValue(InterporationMode, item)}}
+                </label>
+            </p>
+            <p>
+                フレーム表示: <input type="checkbox" v-model="isFrameEnabled" @change="inputChanged" />
+            </p>
+        </fieldset>
+        <div style="display: none;">
+            <canvas id="croppedCanvas" width="1" height="1"></canvas>
+            <canvas id="resultCanvas" width="1" height="1"></canvas>
+            <img v-for="item in Rarity" v-if="item < 11" v-bind:src="imageRoot + '/IconFrameStar'+item+'.png?20201031'"
+                v-bind:id="'IconFrameStar'+item">
+            <img v-for="item in Rarity" v-if="item < 11"
+                v-bind:src="imageRoot + '/IconCircleFrameStar'+item+'.png?20201031'"
+                v-bind:id="'IconCircleFrameStar'+item">
+            <img v-for="item in Rarity" v-if="item < 11" v-bind:src="imageRoot + '/Star'+item+'.png?20201031'"
+                v-bind:id="'Star'+item">
+            <img v-for="item in Rarity" v-if="item < 11" v-bind:src="imageRoot + '/CircleStar'+item+'.png?20201031'"
+                v-bind:id="'CircleStar'+item">
+            <img v-for="(item, index) in moveTypeIcons" v-if="index > 0"
+                v-bind:src="imageRoot + '/MoveType-' + item + '.png'" v-bind:id="item">
+            <img id="lv40" v-bind:src="imageRoot + '/LV40.png'">
+            <img v-for="(item, index) in weaponTypeIcons" v-if="index > 0" v-bind:src="imageRoot + '/' + item + '.png'"
+                v-bind:id="item" />
+            <img v-for="(item) in SeasonType" v-if="item != SeasonType.None"
+                v-bind:src="imageRoot + '/Season_' + getKeyByValue(SeasonType, item) + '.png'"
+                v-bind:id="getKeyByValue(SeasonType, item)">
+            <img v-for="(item) in FavoriteMark" v-if="item != FavoriteMark.None"
+                v-bind:src="imageRoot + '/Favorite' + item + '.png'" v-bind:id="getKeyByValue(FavoriteMark, item)">
+            <img v-for="(item, index) in moveTypeIcons2" v-if="index > 0"
+                v-bind:src="imageRoot + '/MoveType-' + item + '.png'" v-bind:id="item">
+
+        </div>
+    </div>
+    <script>
+        let rootPath = "/";
+        // rootPath = "./../";
+        const imageRoot = rootPath + "FehTools/FehIconMaker/images";
+
+        const TabId = {
+            Rarity: 0,
+            Weapon: 1,
+            Move: 6,
+            Blessing: 2,
+            Favorite: 3,
+            Detail: 4,
+            Text: 5,
+            Other: 7,
+        };
+
+        const TabLabels = [
+            { id: TabId.Rarity, label: "レアリティ" },
+            { id: TabId.Weapon, label: "武器種" },
+            { id: TabId.Move, label: "移動種" },
+            { id: TabId.Blessing, label: "祝福" },
+            { id: TabId.Favorite, label: "お気に入り" },
+            { id: TabId.Detail, label: "詳細表示" },
+            { id: TabId.Text, label: "テキスト" },
+            { id: TabId.Other, label: "その他" },
+        ];
+        const FontKind = [
+            { label: "源暎ラテミン", value: "WebSubset_GenEiLateMinN" },
+            { label: "システム明朝", value: "serif" },
+            { label: "システムゴシック", value: "sans-serif" },
+            // { label: "源暎ラテゴ", value: "WebSubset_GenEiLateGoN" },
+            // { label: "源暎ラテゴP", value: "WebSubset_GenEiLateGoP" },
+            // { label: "源暎ラテミンP", value: "WebSubset_GenEiLateMinP" },
+        ];
+        const IconType = {
+            Game: 0,
+            Circle: 2,
+            Blog: 1,
+        };
+        function iconTypeToString(iconType) {
+            switch (iconType) {
+                case IconType.Game: return "四角";
+                case IconType.Circle: return "丸形";
+                case IconType.Blog: return "丸形簡易";
+            }
+        }
+        const Rarity = {
+            Star1: 1,
+            Star1_N: 16,
+            Star2: 2,
+            Star2_N: 17,
+            Star3: 3,
+            Star13: 13,
+            Star4: 4,
+            Star12: 12,
+            Star5: 5,
+            Star11: 11,
+            Star6: 6,
+            Star7: 7,
+            Star14: 14,
+            Star10: 10,
+            Star8: 8,
+            Star15: 15,
+            Star9: 9,
+        };
+        const FavoriteMark = {
+            None: 0,
+            Favorite1: 1,
+            Favorite2: 2,
+            Favorite3: 3,
+            Favorite4: 4,
+            Favorite5: 5,
+            Favorite6: 6,
+            Favorite7: 7,
+            Favorite8: 8
+        };
+        const Levels = [
+            40,
+        ];
+        function levelToString(value) {
+            switch (value) {
+                case 40: return "40";
+            }
+        }
+        function rarityToString(value) {
+            switch (value) {
+                case Rarity.Star1: return "☆1";
+                case Rarity.Star1_N: return "☆1+";
+                case Rarity.Star2: return "☆2";
+                case Rarity.Star2_N: return "☆2+";
+                case Rarity.Star3: return "☆3";
+                case Rarity.Star13: return "☆3+";
+                case Rarity.Star4: return "☆4";
+                case Rarity.Star12: return "☆4+";
+                case Rarity.Star5: return "☆5";
+                case Rarity.Star11: return "☆5+";
+                case Rarity.Star6: return "☆5+10";
+                case Rarity.Star7: return "☆5偶像";
+                case Rarity.Star14: return "☆5+偶像";
+                case Rarity.Star10: return "☆5+10偶像";
+                case Rarity.Star8: return "☆5絆";
+                case Rarity.Star15: return "☆5+絆";
+                case Rarity.Star9: return "☆5+10絆";
+            }
+        }
+        function iconSizeToString(value) {
+            let size = getIconSize(value);
+            return `${size}×${size}`;
+        }
+        function getIconSize(value) {
+            switch (value) {
+                case IconSizeType.Size50px: return 50;
+                case IconSizeType.Size100px: return 100;
+                case IconSizeType.Size200px: return 200;
+                case IconSizeType.Size400px: return 400;
+            }
+        }
+        const IconSizeType = {
+            Size50px: 0,
+            Size100px: 1,
+            Size200px: 2,
+            Size400px: 3,
+        };
+        const SeasonType = {
+            None: -1,
+            Light: 0,
+            Light_L: 8,
+            Dark: 1,
+            Dark_L: 9,
+            Astra: 2,
+            Astra_L: 10,
+            Anima: 3,
+            Anima_L: 11,
+            Fire: 4,
+            Fire_L: 12,
+            Water: 5,
+            Water_L: 13,
+            Wind: 6,
+            Wind_L: 14,
+            Earth: 7,
+            Earth_L: 15,
+        };
+        function getResizeRatio(sizeType) {
+            switch (sizeType) {
+                case IconSizeType.Size50px: return 0.25;
+                case IconSizeType.Size100px: return 0.5;
+                case IconSizeType.Size200px: return 1;
+                case IconSizeType.Size400px: return 2;
+            }
+        }
+        function getKeyByValue(object, value) {
+            return Object.keys(object).find(key => object[key] === value);
+        }
+        const DisplayItem = {
+            None: -1,
+            MoveType: 0,
+            Level: 1,
+            Rarity: 2,
+        };
+        const InterporationMode = {
+            Nearest: 0,
+            Linear: 1,
+            Area: 2,
+            Cubic: 3,
+            Lanczos: 4,
+        };
+        function toCvInterporationMode(value) {
+            switch (value) {
+                case InterporationMode.Nearest: return cv.INTER_NEAREST;
+                case InterporationMode.Linear: return cv.INTER_LINEAR;
+                case InterporationMode.Area: return cv.INTER_AREA;
+                case InterporationMode.Cubic: return cv.INTER_CUBIC;
+                case InterporationMode.Lanczos: return cv.INTER_LANCZOS4;
+                default:
+                    throw new Error("Unexpected default.");
+            }
+        }
+        function displayItemToString(value) {
+            switch (value) {
+                case DisplayItem.None: return "なし";
+                case DisplayItem.MoveType: return "移動タイプ";
+                case DisplayItem.Level: return "レベル";
+                case DisplayItem.Rarity: return "レアリティ";
+            }
+        }
+
+        class AppData {
+            constructor() {
+                this.isImageDrawingDisabled = false;
+                this.fontColor = "#ffffff";
+                this.fontStrokeColor = "#000000";
+                this.fontLineWidth = 3;
+                this.activeTabIndex = TabId.Rarity;
+                this.overlayTextPosXRatio = 0.5;
+                this.overlayTextPosYRatio = 0.9;
+                this.overlayText = "";
+                this.fontSize = 40;
+                this.fontKind = "WebSubset_GenEiLateMinN";
+                this.message = "ツールを初期化しています。しばらくお待ちください..(結構時間かかることがあります)";
+                this.iconType = IconType.Game;
+                // this.iconType = IconType.Circle;
+                this.iconSizeType = IconSizeType.Size100px;
+                this.currentMoveTypeIndex = 1;
+                this.level = 40;
+                this.rarity = Rarity.Star5;
+                this.displayItem = DisplayItem.MoveType;
+                this.borderThickness = 8;
+                this.previewBgColor = "#ffffff";
+                this.blessing = SeasonType.None;
+                this.interporationMode = InterporationMode.Cubic;
+                this.favoriteMark = FavoriteMark.None;
+                this.isFrameEnabled = true;
+                this.moveTypeIcons = [
+                    null,
+                    "Infantry",
+                    "Armor",
+                    "Caverly",
+                    "Flier",
+                ];
+                this.moveTypeIcons2 = [
+                    null,
+                    "Infantry2",
+                    "Armor2",
+                    "Caverly2",
+                    "Flier2",
+                ];
+                this.currentWeaponTypeIndex = 1;
+                this.weaponTypeIcons = [
+                    null,
+                    "Red_Sword",
+                    "Red_Bow",
+                    "Red_Dagger",
+                    "Red_Tome",
+                    "Red_Breath",
+                    "Red_Beast",
+                    "Blue_Lance",
+                    "Blue_Bow",
+                    "Blue_Dagger",
+                    "Blue_Tome",
+                    "Blue_Breath",
+                    "Blue_Beast",
+                    "Green_Axe",
+                    "Green_Bow",
+                    "Green_Dagger",
+                    "Green_Tome",
+                    "Green_Breath",
+                    "Green_Beast",
+                    "Gray_Staff",
+                    "Gray_Bow",
+                    "Gray_Dagger",
+                    "Gray_Tome",
+                    "Gray_Breath",
+                    "Gray_Beast",
+                ];
+                this.gameIconParamStyle = "";
+                this.blogIconParamStyle = "display:none;";
+            }
+        }
+        let appData = new AppData();
+        let vm = new Vue({
+            el: "#app",
+            data: appData,
+            methods: {
+                changeTab: function (index) {
+                    this.activeTabIndex = index;
+                },
+                inputChanged: function () {
+                    updateIcon();
+                },
+                iconTypeChanged: function () {
+                    switch (appData.iconType) {
+                        case IconType.Game:
+                        case IconType.Circle:
+                            appData.gameIconParamStyle = "";
+                            appData.blogIconParamStyle = "display:none;";
+                            break;
+                        case IconType.Blog:
+                            appData.gameIconParamStyle = "display:none;";
+                            appData.blogIconParamStyle = "";
+                            break;
+                    }
+                    updateIcon();
+                },
+                sizeChanged: function () {
+                    redrawCroppedCanvas(g_croperEvent);
+                    updateIcon();
+                },
+            },
+        });
+
+        function putResizedImage(dest, putImg, putX, putY, sizeX, sizeY) {
+            let overlay = cv.imread(putImg, cv.IMREAD_COLOR);
+            cv.resize(overlay, overlay,
+                new cv.Size(sizeX, sizeY), 0, 0, toCvInterporationMode(appData.interporationMode));
+
+            for (let y = 0; y < overlay.rows; ++y) {
+                for (let x = 0; x < overlay.cols; ++x) {
+                    let srcIndex = (y * overlay.cols + x) * overlay.channels();
+                    let destIndex = ((y + putY) * dest.cols + x + putX) * dest.channels();
+                    let alpha = overlay.data[srcIndex + 3];
+                    let alphaRatio = (alpha / 255.0);
+                    let destAlphaRatio = 1.0 - alphaRatio;
+                    for (let c = 0; c < 3; ++c) {
+                        dest.data[destIndex + c] = dest.data[destIndex + c] * destAlphaRatio + overlay.data[srcIndex + c] * alphaRatio;
+                    }
+                    dest.data[destIndex + 3] = Math.min(alpha + dest.data[destIndex + 3], 255);
+                }
+            }
+            overlay.delete();
+        }
+
+        function extractColorFromId(weaponTypeId) {
+            if (weaponTypeId == null) {
+                return "Gray";
+            }
+
+            let split = weaponTypeId.split("_");
+            let color = split[0];
+            return color;
+        }
+        function convertColorNameToCvScalar(color) {
+            switch (color) {
+                case "Blue": return new cv.Scalar(47, 89, 149, 255);
+                case "Red": return new cv.Scalar(155, 19, 26, 255);
+                case "Green": return new cv.Scalar(7, 110, 59, 255);
+                case "Gray": return new cv.Scalar(100, 100, 100, 255);
+                default: return new cv.Scalar(255, 255, 255, 255);
+            }
+        }
+        function componentToHex(c) {
+            var hex = c.toString(16);
+            return hex.length == 1 ? "0" + hex : hex;
+        }
+        function rgbaToHex(r, g, b, a) {
+            return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b) + componentToHex(a);
+        }
+        function convertColorNameToColorValue(color) {
+            switch (color) {
+                case "Blue": return rgbaToHex(47, 89, 149, 255);
+                case "Red": return rgbaToHex(155, 19, 26, 255);
+                case "Green": return rgbaToHex(7, 110, 59, 255);
+                case "Gray": return rgbaToHex(100, 100, 100, 255);
+                default: return rgbaToHex(255, 255, 255, 255);
+            }
+        }
+        function getCvBgColorFromRarity(rarity) {
+            switch (rarity) {
+                case Rarity.Star1: return new cv.Scalar(34, 84, 98, 255);
+                case Rarity.Star2: return new cv.Scalar(65, 91, 102, 255);
+                case Rarity.Star3: return new cv.Scalar(160, 90, 60, 255);
+                case Rarity.Star4: return new cv.Scalar(140, 180, 180, 255);
+                case Rarity.Star5: return new cv.Scalar(160, 140, 20, 255);
+                case Rarity.Star9:
+                case Rarity.Star10:
+                case Rarity.Star11:
+                case Rarity.Star12:
+                case Rarity.Star13:
+                case Rarity.Star14:
+                case Rarity.Star15:
+                case Rarity.Star1_N:
+                case Rarity.Star2_N:
+                case Rarity.Star6: return new cv.Scalar(140, 230, 230, 255);
+                case Rarity.Star7: return new cv.Scalar(20, 70, 150, 255);
+                case Rarity.Star8: return new cv.Scalar(214, 176, 200, 255);
+            }
+        }
+        function getBgColorFromRarity(rarity) {
+            switch (rarity) {
+                case Rarity.Star1: return rgbaToHex(34, 84, 98, 255);
+                case Rarity.Star2: return rgbaToHex(65, 91, 102, 255);
+                case Rarity.Star3: return rgbaToHex(160, 90, 60, 255);
+                case Rarity.Star4: return rgbaToHex(140, 180, 180, 255);
+                case Rarity.Star5: return rgbaToHex(160, 140, 20, 255);
+                case Rarity.Star9:
+                case Rarity.Star10:
+                case Rarity.Star11:
+                case Rarity.Star12:
+                case Rarity.Star13:
+                case Rarity.Star14:
+                case Rarity.Star15:
+                case Rarity.Star1_N:
+                case Rarity.Star2_N:
+                case Rarity.Star6: return rgbaToHex(140, 230, 230, 255);
+                case Rarity.Star7: return rgbaToHex(20, 70, 150, 255);
+                case Rarity.Star8: return rgbaToHex(214, 176, 200, 255);
+            }
+        }
+
+        function getActualRarity(inputRarity) {
+            let rarity = inputRarity;
+            switch (inputRarity) {
+                case Rarity.Star1_N:
+                    rarity = Rarity.Star1;
+                    break;
+                case Rarity.Star2_N:
+                    rarity = Rarity.Star2;
+                    break;
+                case Rarity.Star13:
+                    rarity = Rarity.Star3;
+                    break;
+                case Rarity.Star12:
+                    rarity = Rarity.Star4;
+                    break;
+                case Rarity.Star11:
+                    rarity = Rarity.Star5;
+                    break;
+                case Rarity.Star14:
+                    rarity = Rarity.Star7;
+                    break;
+                case Rarity.Star15:
+                    rarity = Rarity.Star8;
+                    break;
+            }
+            return rarity;
+        }
+        function getCircleFrameElemIdFromRarity(inputRarity) {
+            return `IconCircleFrameStar${getActualRarity(inputRarity)}`;
+        }
+        function getFrameElemIdFromRarity(inputRarity) {
+            return `IconFrameStar${getActualRarity(inputRarity)}`;
+        }
+        function getStarElemIdFromRarity(inputRarity) {
+            return getKeyByValue(Rarity, getActualRarity(inputRarity));
+        }
+
+        function updateIcon() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            if (croppedCanvas.width == 1) {
+                return;
+            }
+
+            const resultCanvas = document.getElementById("resultCanvas");
+            let ctx = resultCanvas.getContext("2d");
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            switch (appData.iconType) {
+                case IconType.Game:
+                    updateIconForGame();
+                    break;
+                case IconType.Blog:
+                    updateIconForBlog();
+                    break;
+                case IconType.Circle:
+                    updateIconForCircle();
+                    break;
+            }
+
+            let uri = resultCanvas.toDataURL();
+            let resultImg = document.getElementById("resultImg");
+            resultImg.src = uri;
+        }
+
+        function updateIconForGame() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            let weaponTypeId = null;
+            if (appData.currentWeaponTypeIndex >= 0) {
+                weaponTypeId = appData.weaponTypeIcons[appData.currentWeaponTypeIndex];
+            }
+            let colorName = extractColorFromId(weaponTypeId);
+
+            const resultCanvas = document.getElementById("resultCanvas");
+            resultCanvas.width = croppedCanvas.width;
+            resultCanvas.height = croppedCanvas.height;
+            let resizeRatio = getResizeRatio(appData.iconSizeType);
+            let ctx = resultCanvas.getContext("2d");
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+
+            // フレームの外側を抜く
+            {
+                let frameRatio = 0.95;
+                let frameOutRatio = 1.0 - frameRatio;
+                let framePutX = croppedCanvas.width * frameOutRatio * 0.5;
+                let framePutY = croppedCanvas.height * frameOutRatio * 0.5;
+                let frameWidth = croppedCanvas.width * frameRatio;
+                let frameHeight = croppedCanvas.height * frameRatio;
+                let bgColorHex = getBgColorFromRarity(appData.rarity);
+                ctx.fillStyle = `${bgColorHex}`;
+                ctx.fillRect(framePutX, framePutY, frameWidth, frameHeight);
+                if (!appData.isImageDrawingDisabled) {
+                    ctx.drawImage(croppedCanvas,
+                        framePutX, framePutY, frameWidth, frameHeight,
+                        framePutX, framePutY, frameWidth, frameHeight,
+                    );
+                }
+            }
+
+            // フレームアイコンを重ねる
+            if (appData.isFrameEnabled) {
+                let iconSize = resultCanvas.width;
+                let putX = 0;
+                let putY = putX;
+                let elemId = getFrameElemIdFromRarity(appData.rarity);
+                ctx.drawImage(document.getElementById(elemId),
+                    putX, putY, iconSize, iconSize);
+            }
+
+            // 武器種アイコンを重ねる
+            let weaponIconSize = 0;
+            if (weaponTypeId != null) {
+                let id = weaponTypeId;
+                const img = document.getElementById(id);
+                if (img == null) {
+                    throw new Error(`img with id "${id}" was not found.`);
+                }
+
+                let iconSize = 52 * resizeRatio;
+                let putX = 0;
+                if (colorName == "Blue") {
+                    // 青アイコンは四角い影響で大きく見えるので小さくする
+                    const blueIconSize = 40 * resizeRatio;
+                    putX = (iconSize - blueIconSize) * 0.5;
+                    iconSize = blueIconSize;
+                }
+                let putY = putX;
+                weaponIconSize = iconSize + putY * 2;
+                ctx.drawImage(img,
+                    putX, putY, iconSize, iconSize);
+            }
+
+            // 祝福アイコン
+            if (appData.blessing != SeasonType.None) {
+                let seasonId = getKeyByValue(SeasonType, appData.blessing);
+                let iconSize = 52 * resizeRatio;
+                let putX = 0;
+                let putY = weaponIconSize;
+                weaponIconSize += iconSize;
+                ctx.drawImage(document.getElementById(seasonId),
+                    putX, putY, iconSize, iconSize);
+            }
+
+            // お気に入りアイコン
+            if (appData.favoriteMark != FavoriteMark.None) {
+                let elemId = getKeyByValue(FavoriteMark, appData.favoriteMark);
+                let iconSize = 52 * resizeRatio;
+                let putX = 0;
+                let putY = weaponIconSize;
+                ctx.drawImage(document.getElementById(elemId),
+                    putX, putY, iconSize, iconSize);
+            }
+
+
+            switch (appData.displayItem) {
+                case DisplayItem.MoveType:
+                    {
+                        // 移動種アイコンを重ねる
+                        let moveTypeId = null;
+                        if (appData.currentMoveTypeIndex >= 0) {
+                            moveTypeId = appData.moveTypeIcons2[appData.currentMoveTypeIndex];
+                        }
+                        if (moveTypeId != null) {
+                            let iconSize = 48 * resizeRatio;
+                            let putX = resultCanvas.width - iconSize;
+                            let putY = resultCanvas.height - iconSize;
+                            ctx.drawImage(document.getElementById(moveTypeId),
+                                putX, putY, iconSize, iconSize);
+                        }
+                    }
+                    break;
+                case DisplayItem.Level:
+                    {
+                        // LV40アイコンを重ねる
+                        if (appData.level > 0) {
+                            let iconWidth = 137 * resizeRatio;
+                            let iconHeight = 44 * resizeRatio;
+                            let putX = Math.trunc((resultCanvas.width - iconWidth) * 0.5);
+                            let putY = Math.trunc(resultCanvas.height - iconHeight);
+                            ctx.drawImage(document.getElementById("lv40"),
+                                putX, putY, iconWidth, iconHeight);
+                        }
+                    }
+                    break;
+                case DisplayItem.Rarity:
+                    {
+                        let iconWidth = 180 * resizeRatio;
+                        let iconHeight = 43 * resizeRatio;
+                        let putX = Math.trunc((resultCanvas.width - iconWidth) * 0.5);
+                        let putY = Math.trunc(resultCanvas.height - iconHeight);
+                        let id = getStarElemIdFromRarity(appData.rarity);
+                        ctx.drawImage(document.getElementById(id),
+                            putX, putY, iconWidth, iconHeight);
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            drawOverlayText();
+        }
+
+        function updateIconForBlog() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            let centerX = croppedCanvas.width / 2;
+            let centerY = croppedCanvas.height / 2;
+            let resizeRatio = getResizeRatio(appData.iconSizeType);
+            let thickness = appData.borderThickness * resizeRatio;
+
+            let radius = Math.min(centerX, centerY) - 1;
+            let moveTypeId = null;
+            if (appData.currentMoveTypeIndex >= 0) {
+                moveTypeId = appData.moveTypeIcons[appData.currentMoveTypeIndex];
+            }
+            let weaponTypeId = null;
+            if (appData.currentWeaponTypeIndex >= 0) {
+                weaponTypeId = appData.weaponTypeIcons[appData.currentWeaponTypeIndex];
+            }
+
+            let colorName = extractColorFromId(weaponTypeId);
+
+            const resultCanvas = document.getElementById("resultCanvas");
+            resultCanvas.width = croppedCanvas.width;
+            resultCanvas.height = croppedCanvas.height;
+            let ctx = resultCanvas.getContext("2d");
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+
+            // フレームの外側を抜く
+            let circleDrawRadius = radius - thickness / 2;
+            {
+                let bgColorHex = getBgColorFromRarity(appData.rarity);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleDrawRadius, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+
+                // ctx.fillStyle = `${bgColorHex}`;
+                // ctx.fillRect(framePutX, framePutY, frameWidth, frameHeight);
+                if (!appData.isImageDrawingDisabled) {
+                    ctx.drawImage(croppedCanvas,
+                        0, 0, resultCanvas.width, resultCanvas.height,
+                        0, 0, resultCanvas.width, resultCanvas.height
+                    );
+                }
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleDrawRadius, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.closePath();
+                ctx.restore();
+            }
+
+            if (appData.isFrameEnabled) {
+                let color = convertColorNameToColorValue(colorName);
+                drawCircleStroke(resultCanvas,
+                    centerX, centerY, circleDrawRadius, color, thickness);
+            }
+
+
+            // 移動種アイコンを重ねる
+            if (moveTypeId != null) {
+                let iconSize = 60 * resizeRatio;
+                let putX = 8 * resizeRatio;
+                let putY = resultCanvas.height - iconSize - putX;
+                ctx.drawImage(document.getElementById(moveTypeId),
+                    Math.trunc(putX),
+                    Math.trunc(putY), iconSize, iconSize);
+            }
+
+            // 武器種アイコンを重ねる
+            if (weaponTypeId != null) {
+                let iconSize = 72 * resizeRatio;
+                let putX = 4 * resizeRatio;
+                if (colorName == "Blue") {
+                    // 青アイコンは四角い影響で大きく見えるので小さくする
+                    iconSize = 60 * resizeRatio;
+                    putX = 8 * resizeRatio;
+                }
+                let putY = putX;
+                ctx.drawImage(document.getElementById(weaponTypeId),
+                    Math.trunc(putX),
+                    Math.trunc(putY), iconSize, iconSize);
+            }
+
+            drawOverlayText();
+        }
+
+
+        function updateIconForCircle() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            let centerX = croppedCanvas.width / 2;
+            let centerY = croppedCanvas.height / 2;
+            let resizeRatio = getResizeRatio(appData.iconSizeType);
+            let thickness = appData.borderThickness * resizeRatio;
+
+            let radius = Math.min(centerX, centerY) - 1;
+            let moveTypeId = null;
+            if (appData.currentMoveTypeIndex >= 0) {
+                moveTypeId = appData.moveTypeIcons[appData.currentMoveTypeIndex];
+            }
+            let weaponTypeId = null;
+            if (appData.currentWeaponTypeIndex >= 0) {
+                weaponTypeId = appData.weaponTypeIcons[appData.currentWeaponTypeIndex];
+            }
+
+            let colorName = extractColorFromId(weaponTypeId);
+
+            const resultCanvas = document.getElementById("resultCanvas");
+            resultCanvas.width = croppedCanvas.width;
+            resultCanvas.height = croppedCanvas.height;
+            let ctx = resultCanvas.getContext("2d");
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            ctx.imageSmoothingEnabled = true;
+            // フレームの外側を抜く
+            let circleDrawRadius = radius - thickness / 2;
+            {
+                let bgColorHex = getBgColorFromRarity(appData.rarity);
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleDrawRadius, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+
+                ctx.fillStyle = `${bgColorHex}`;
+                ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+                if (!appData.isImageDrawingDisabled) {
+                    ctx.drawImage(croppedCanvas,
+                        0, 0, resultCanvas.width, resultCanvas.height,
+                        0, 0, resultCanvas.width, resultCanvas.height
+                    );
+                }
+
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, circleDrawRadius, 0, Math.PI * 2);
+                ctx.clip();
+                ctx.closePath();
+                ctx.restore();
+            }
+
+            // フレームアイコンを重ねる
+            if (appData.isFrameEnabled) {
+                let iconSize = resultCanvas.width;
+                let putX = 0;
+                let putY = putX;
+                let elemId = getCircleFrameElemIdFromRarity(appData.rarity);
+                ctx.drawImage(document.getElementById(elemId),
+                    putX, putY, iconSize, iconSize);
+            }
+
+            // 武器種アイコンを重ねる
+            let putXOffsets = [18, 5, 18];
+            let currentOffsetIndex = 0;
+            let weaponIconSize = 0;
+            if (weaponTypeId != null) {
+                let iconSize = 52;
+                let putX = putXOffsets[currentOffsetIndex];
+                let offset = 0;
+                if (colorName == "Blue") {
+                    // 青アイコンは四角い影響で大きく見えるので小さくする
+                    const blueIconSize = 40;
+                    offset = (iconSize - blueIconSize) * 0.5;
+                    putX += offset;
+                    iconSize = blueIconSize;
+                }
+                let putY = putX + 5;
+                weaponIconSize = (putY + iconSize + offset) * resizeRatio;
+                iconSize = Math.trunc(iconSize * resizeRatio);
+                ctx.drawImage(document.getElementById(weaponTypeId),
+                    Math.trunc(putX * resizeRatio),
+                    Math.trunc(putY * resizeRatio), iconSize, iconSize);
+                ++currentOffsetIndex;
+            }
+
+            // 祝福アイコン
+            if (appData.blessing != SeasonType.None) {
+                let seasonId = getKeyByValue(SeasonType, appData.blessing);
+                let iconSize = Math.trunc(52 * resizeRatio);
+                let putX = putXOffsets[currentOffsetIndex] * resizeRatio;
+                let putY = weaponIconSize;
+                weaponIconSize += iconSize;
+                ctx.drawImage(document.getElementById(seasonId),
+                    Math.trunc(putX),
+                    Math.trunc(putY), iconSize, iconSize);
+
+                ++currentOffsetIndex;
+            }
+
+            // お気に入りアイコン
+            if (appData.favoriteMark != FavoriteMark.None) {
+                let elemId = getKeyByValue(FavoriteMark, appData.favoriteMark);
+                let iconSize = Math.trunc(52 * resizeRatio);
+                let putX = putXOffsets[currentOffsetIndex] * resizeRatio;
+                let putY = weaponIconSize;
+                ctx.drawImage(document.getElementById(elemId),
+                    Math.trunc(putX),
+                    Math.trunc(putY), iconSize, iconSize);
+                ++currentOffsetIndex;
+            }
+
+            switch (appData.displayItem) {
+                case DisplayItem.MoveType:
+                    {
+                        // 移動種アイコンを重ねる
+                        let moveTypeId = null;
+                        if (appData.currentMoveTypeIndex >= 0) {
+                            moveTypeId = appData.moveTypeIcons2[appData.currentMoveTypeIndex];
+                        }
+                        if (moveTypeId != null) {
+                            let iconSize = 48 * resizeRatio;
+                            let putX = resultCanvas.width - iconSize - 20 * resizeRatio;
+                            let putY = resultCanvas.height - iconSize - 20 * resizeRatio;
+                            ctx.drawImage(document.getElementById(moveTypeId),
+                                Math.trunc(putX),
+                                Math.trunc(putY), iconSize, iconSize);
+                        }
+                    }
+                    break;
+                case DisplayItem.Level:
+                    {
+                        // LV40アイコンを重ねる
+                        if (appData.level > 0) {
+                            let iconWidth = 137 * resizeRatio;
+                            let iconHeight = 44 * resizeRatio;
+                            let putX = Math.trunc((resultCanvas.width - iconWidth) * 0.5);
+                            let putY = Math.trunc(resultCanvas.height - iconHeight);
+                            ctx.drawImage(document.getElementById("lv40"),
+                                Math.trunc(putX),
+                                Math.trunc(putY), iconWidth, iconHeight);
+                        }
+                    }
+                    break;
+                case DisplayItem.Rarity:
+                    {
+                        let iconWidth = 180 * resizeRatio;
+                        let iconHeight = 75 * resizeRatio;
+                        let putX = Math.trunc((resultCanvas.width - iconWidth) * 0.5);
+                        let putY = Math.trunc(resultCanvas.height - iconHeight);
+                        let id = "Circle" + getStarElemIdFromRarity(appData.rarity);
+                        ctx.drawImage(document.getElementById(id),
+                            Math.trunc(putX),
+                            Math.trunc(putY), iconWidth, iconHeight);
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            drawOverlayText();
+        }
+
+        function drawCircleStroke(
+            canvas, centerX, centerY, radius, color, thickness
+        ) {
+            const width = canvas.width;
+            const height = canvas.height;
+            let ctx = canvas.getContext("2d");
+            let circle = new Path2D();
+            circle.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+            ctx.lineWidth = thickness;
+            ctx.strokeStyle = `${color}`;
+            ctx.imageSmoothingEnabled = true;
+            ctx.stroke(circle);
+        }
+
+        function drawOverlayText() {
+            const resizeRatio = getResizeRatio(appData.iconSizeType);
+            const resultCanvas = document.getElementById("resultCanvas");
+            const fontMultiply = resizeRatio;
+            const fontSize = Number(appData.fontSize) * fontMultiply;
+            const fontFamily = appData.fontKind;
+            // console.log(fontFamily);
+            const lineHeight = 1.8;
+            let ctx = resultCanvas.getContext("2d");
+            ctx.fillStyle = appData.fontColor;
+            ctx.strokeStyle = `${appData.fontStrokeColor}`;
+            ctx.lineWidth = Number(appData.fontLineWidth) * fontMultiply;
+            ctx.textAlign = "center";
+            drawTextOnCanvasByRatio(resultCanvas, appData.overlayText,
+                Number(appData.overlayTextPosXRatio),
+                Number(appData.overlayTextPosYRatio),
+                fontSize, fontFamily);
+        }
+
+        function drawTextOnCanvasByRatio(
+            canvas, text, textPosXRatio, textPosYRatio, fontSize, fontFamily, lineHeight = 1.1) {
+            const ctx = resultCanvas.getContext("2d");
+            ctx.font = `normal ${fontSize}px ${fontFamily}`;
+            const textPosX = canvas.width * textPosXRatio;
+            const textPosY = canvas.height * textPosYRatio;
+            drawTextOnCanvas(ctx, text, textPosX, textPosY, fontSize, lineHeight);
+        }
+        function drawTextOnCanvas(ctx, text, textPosX, textPosY, fontSize, lineHeight = 1.1) {
+            for (let lines = text.split("\n"), i = 0; i < lines.length; ++i) {
+                let line = lines[i];
+                let posY = textPosY + fontSize * lineHeight * i;
+                ctx.strokeText(
+                    line,
+                    textPosX, posY);
+                ctx.fillText(
+                    line,
+                    textPosX, posY);
+            }
+        }
+
+        let cropper = null;
+        const cropAspectRatio = 1.0 / 1.0;
+        const scaledWidth = 400;
+        const cropImage = function (evt) {
+            const files = evt.target.files;
+            if (files.length == 0) {
+                return;
+            }
+            let file = files[0];
+
+            reader.readAsDataURL(file);
+        }
+
+        function moveCropBox(x, y) {
+            let box = cropper.getCropBoxData();
+            box.left = box.left - x;
+            box.top = box.top - y;
+            cropper.setCropBoxData(box);
+        }
+
+        let image = document.getElementById("sourceCanvas");
+        let g_croperEvent = null;
+        let reader = new FileReader();
+        reader.onload = function (evt) {
+            image.src = evt.target.result;
+        }
+
+        function redrawCroppedCanvas(event) {
+            // let scale = scaledWidth / image.width;
+            let scale = 1;
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            {
+                let ctx = croppedCanvas.getContext("2d");
+                croppedCanvas.width = getIconSize(appData.iconSizeType);
+                croppedCanvas.height = croppedCanvas.width;
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height);
+                ctx.drawImage(image,
+                    event.detail.x / scale, event.detail.y / scale, event.detail.width / scale, event.detail.height / scale,
+                    0, 0, croppedCanvas.width, croppedCanvas.height
+                );
+            }
+        }
+
+        image.onload = function () {
+            let scale = 1;
+            // let scale = scaledWidth / image.width;
+            let imageData = null;
+            {
+                const canvas = document.getElementById("sourceCanvas");
+                // {
+                //     let ctx = canvas.getContext("2d");
+                //     canvas.width = image.width * scale;
+                //     canvas.height = image.height * scale;
+                //     ctx.drawImage(image, 0, 0, image.width, image.height, 0, 0, canvas.width, canvas.height);
+                // }
+                if (cropper != null) {
+                    // 画像を再読み込みした場合は破棄が必要
+                    cropper.destroy();
+                }
+
+                const settingSample1 = {
+                    x: 70,
+                    y: 30,
+                    width: 50,
+                    height: 50,
+                };
+                const settingSample2 = {
+                    x: 105,
+                    y: 0,
+                    width: 100,
+                    height: 100,
+                };
+                const settingSample3 = {
+                    x: 60,
+                    y: 45,
+                    width: 130,
+                    height: 130,
+                };
+
+                cropper = new Cropper(canvas, {
+                    aspectRatio: cropAspectRatio,
+                    // viewMode: 2,
+                    movable: false,
+                    zoomable: false,
+                    rotatable: false,
+                    scalable: false,
+                    autoCrop: true,
+                    data: settingSample3,
+                    crop: function (event) {
+                        g_croperEvent = event;
+                        redrawCroppedCanvas(event);
+                        updateIcon();
+                    }
+                });
+            }
+        }
+        window.onload = function () {
+            const uploader = document.getElementById('uploader');
+            uploader.addEventListener('change', cropImage);
+            appData.message = "";
+            updateIcon();
+        }
+    </script>
+</body>
+
+</html>
