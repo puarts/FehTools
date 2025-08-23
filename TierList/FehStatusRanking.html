@@ -1,0 +1,345 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>FEH全英雄のステータスランキング(Tier表)です。</p>
+    <style>
+        .checkItem {
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .metaInfo {
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px;
+            pointer-events: none;
+            color: white;
+            position: absolute;
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="feh_loading_anim"></div>
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+        <select v-model="targetStatus" @change="updateRanks">
+            <option v-for="value in EvalTarget" v-bind:value="value">{{EvalTargetToLabel[value]}}
+            </option>
+        </select>のTier表を表示
+        <details style="margin: 10px;">
+            <summary>条件で絞り込み</summary>
+            <fieldset>
+                <legend>属性</legend>
+                <div v-for="item in displayColorTypes" class="checkItem" style="width: 50px;">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value"
+                        @change="syncWeaponsFromColors(item.id,item.value)"><label v-bind:for="item.domId">
+                        <img v-bind:src="item.label" width="25" height="25"></label>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>武器種</legend>
+                <span v-for="(item,index) in displayWeaponTypes" style="width:50px">
+                    <div class="checkItem">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                            v-bind:for="item.domId">
+                            <img v-bind:src="item.label" width="25" height="25"></label>
+                    </div>
+                    <div v-if="(index+1)%4 == 0" style="clear:both">
+                    </div>
+                </span>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayWeaponTypes, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayWeaponTypes, false)" value="全てオフ">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>移動タイプ</legend>
+                <div v-for="item in displayMoveTypes" class="checkItem" style="width: 50px;">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                        v-bind:for="item.domId">
+                        <img v-bind:src="item.label" width="25" height="25"></label>
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>排出レアリティ</legend>
+                <div v-for="item in displayRarity" class="checkItem">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                        v-bind:for="item.domId">
+                        ★{{item.label}}</label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayRarity, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayRarity, false)" value="全てオフ">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>種類</legend>
+                <div v-for="item in displayHowToGet" class="checkItem">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                        v-bind:for="item.domId">{{item.label}}</label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayHowToGet, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayHowToGet, false)" value="全てオフ">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>祝福</legend>
+                <div v-for="item in displayBlessing" class="checkItem">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                        v-bind:for="item.domId">
+                        <img v-bind:src="item.label" v-if="item.label.startsWith('/')">
+                        <span v-else>{{item.label}}</span>
+                    </label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayBlessing, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayBlessing, false)" value="全てオフ">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>バージョン(部)</legend>
+                <div v-for="item in displayBook" class="checkItem">
+                    <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="updateRanks"><label
+                        v-bind:for="item.domId">
+                        {{item.label}}</label>
+                </div>
+                <div style="clear:both;">
+                    <input type="button" @click="setBoolOptions(displayBook, true)" value="全てオン">
+                    <input type="button" @click="setBoolOptions(displayBook, false)" value="全てオフ">
+                </div>
+            </fieldset>
+        </details>
+        <details style="margin: 10px;">
+            <summary>指定キャラの順位を調べる</summary>
+            <div>
+                <!-- <select2>
+                    <option v-for="option in heroOptions" v-bind:value="option.value">{{option.label}}</option>
+                </select2> -->
+                <select2 :options="heroOptions" v-model="selectedHeroId" @input="calcStatusRankForSelectedHero">
+                </select2>
+                <!-- <input type="button" value="計算" @click="calcStatusRankForSelectedHero"> -->
+                <table border="1">
+                    <tr>
+                        <th>評価対象</th>
+                        <th>順位</th>
+                    </tr>
+                    <tr v-for="order in selectedHeroOrders">
+                        <td>{{EvalTargetToLabel[order.key]}}</td>
+                        <td>{{order.value}} / {{filteredHeroCount}}</td>
+                    </tr>
+                </table>
+
+            </div>
+        </details>
+        <fieldset style="margin-top: 10px;">
+            <legend>評価方法</legend>
+            <label for="isDragonflowerEnabled" class="checkItem"><input id="isDragonflowerEnabled" type="checkbox"
+                    v-model="isDragonflowerEnabled" @change="updateRanks">神竜の花最大</label>
+            <label for="isResplendentEnabled" class="checkItem"><input id="isResplendentEnabled" type="checkbox"
+                    v-model="isResplendentEnabled" @change="updateRanks">神装補正あり</label>
+            <label for="isAssetStatusEnabled" class="checkItem"><input id="isAssetStatusEnabled" type="checkbox"
+                    v-model="isAssetStatusEnabled" @change="updateRanks">個性を加味</label>
+            <label for="isAscendingOrder" class="checkItem"><input id="isAscendingOrder" type="checkbox"
+                    v-model="isAscendingOrder" @change="updateRanks">ワーストランキング</label>
+        </fieldset>
+
+        <div style="display: none;">
+            {{message}}
+        </div>
+
+        <table border="1" style="border-collapse:collapse;margin-top:10px" align="left">
+            <tr>
+                <th colspan="2" style="background-color: #555; color:white" align="Center">
+                    「{{EvalTargetToLabel[targetStatus]}}」{{isAscendingOrder ? "ワースト" : ""}}ランキング
+                </th>
+            </tr>
+            <tr v-for="rankGroup in rankGroups">
+                <th v-bind:style="`text-align:center;width:35px;padding:10px;background-color:${rankGroup.color}`">
+                    {{rankGroup.label}}</th>
+                <td style="text-align:left;background-color:#181916">
+                    <a v-for="child in rankGroup.children" v-bind:href="child.url" v-bind:title="child.name">
+                        <div style="position: relative;display:inline-block">
+                            <img v-bind:src="child.iconPath" width="50" height="50">
+                            <span class="metaInfo displayTarget" style="right: 0; top: 0;" v-show="child.hasBlessing">
+                                <img v-bind:src="child.blessingIconPath"></span>
+                        </div>
+                    </a>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script src="/js/jquery-3.7.0.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <!-- select2 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.6-rc.0/js/select2.min.js"></script>
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.3.4/vue.global.prod.js"></script> -->
+    <!-- <script src="/FehTools/TierList/Utilities.js">
+    </script>
+    <script src="/FehTools/TierList/StatusRankingApp.js?20230714"></script> -->
+
+    <!-- <script type="importmap">
+        {
+          "imports": {
+            "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+          }
+        }
+      </script> -->
+    <script>
+        // import { createApp, computed } from 'vue'
+        // import { AppData } from '/FehTools/TierList/StatusRankingApp.js';
+
+        let g_appData = null;
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let reloadSuffix = "20260726";
+            let scriptFileName = scriptFileNames[index];
+            let src = scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener("load", function (e) {
+            const startTime = Date.now();
+            loadScripts([
+                "/FehTools/TierList/Utilities.js",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/TierList/StatusRankingApp.js",
+            ], () => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load all scripts`);
+
+
+                // select2 を使うためのVueコンポーネント
+                Vue.component('select2', {
+                    template: '<select><slot></slot></select>',
+                    props: {
+                        options: Array,
+                        value: Number,
+                    },
+
+                    mounted: function () {
+                        $(this.$el)
+                            // init select2
+                            .select2({ data: this.options })
+                            .val(this.value)
+                            .trigger('change')
+                            .on('change', (event) =>
+                                this.$emit('input', parseInt(event.target.value, 10))
+                            )
+                    },
+                    watch: {
+                        value: function (val) {
+                            $(this.$el).val(val).trigger('change');
+                        },
+                        // update options
+                        options: function (options) {
+                            let value = this.value;
+                            $(this.$el)
+                                .empty()
+                                .select2({ data: options })
+                                .val(value)
+                                .trigger('change');
+                        }
+                    },
+                    destroyed: function () {
+                        $(this.$el).off().select2('destroy')
+                    },
+                });
+
+
+                g_appData = new AppData();
+                const app = new Vue({
+                    data: g_appData,
+                    el: "#app",
+                    methods: {
+                        updateRanks() {
+                            g_appData.updateRankGroups();
+                        },
+                        setBoolOptions(target, value) {
+                            setPropValues(target, value);
+                            g_appData.updateRankGroups();
+                        },
+                        syncWeaponsFromColors(id, value) {
+                            g_appData.syncWeaponsFromColors(id, value);
+                            g_appData.updateRankGroups();
+                        },
+                        calcStatusRankForSelectedHero() {
+                            g_appData.calcStatusRankForSelectedHero();
+                        },
+                    },
+                    mounted: () => {
+                        // コンポーネントがマウントされた後に実行される処理を記述します
+                        g_appData.init(() => {
+                            const loader = document.getElementById("loader");
+                            loader.style.display = "none";
+                            const app = document.getElementById("app");
+                            app.style.display = "";
+                        });
+                    }
+                });
+
+                // const app = Vue.createApp({
+                //     data() {
+                //         return g_appData;
+                //     },
+                //     mounted() {
+                //         // コンポーネントがマウントされた後に実行される処理を記述します
+                //         g_appData.init(() => {
+                //             const loader = document.getElementById("loader");
+                //             loader.style.display = "none";
+                //             const app = document.getElementById("app");
+                //             app.style.display = "";
+                //         });
+                //         console.log(g_appData.rankGroups);
+                //     },
+                //     updateRankGroups: () => g_appData.updateRankGroups(),
+                // });
+                // app.mount('#app');
+            });
+        });
+
+    </script>
+</body>
+
+</html>

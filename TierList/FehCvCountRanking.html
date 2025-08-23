@@ -1,0 +1,178 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>FEHの担当CV数で評価した声優のTier表(ランキング)です。味方の英雄として登場したキャラのみをカウントしています。</p>
+    <p>各声優の担当キャラを確認したい場合は<a href='https://puarts.com/?pid=1648#main-content'>こちら</a>、イラストレーター版のTier表は<a
+            href='https://puarts.com/?pid=1849#main-content'>こちら</a>で確認できます。</p>
+    <style>
+        .checkItem {
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .metaInfo {
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px;
+            pointer-events: none;
+            color: white;
+            position: absolute;
+        }
+
+        .staffList {
+            font-size: 10px;
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .staffElem {
+            float: left;
+            border-right: 1px solid #bbb;
+            border-radius: 5px;
+            border: 1px solid #bbb;
+            height: 22px;
+            min-width: 130px;
+            margin: 2px;
+            background-color: #ffffff;
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+        <fieldset style="margin-top: 10px;">
+            <legend>評価方法</legend>
+            <input id="countsUniqueNames" type="checkbox" v-model="countsUniqueNames" @change="updateRanks"><label
+                for="countsUniqueNames">同名キャラを除外</label>
+        </fieldset>
+
+        <div style="display: none;">
+            {{message}}
+        </div>
+
+        <table border="1" style="border-collapse:collapse;margin-top:10px" align="left">
+            <tr>
+                <th colspan="2" style="background-color: #555; color:white" align="Center">
+                    CV担当数ランキング
+                </th>
+            </tr>
+            <tr v-for="rankGroup in rankGroups">
+                <th v-bind:style="`text-align:center;width:35px;padding:10px;background-color:${rankGroup.color}`">
+                    {{rankGroup.label}}</th>
+                <td style="text-align:left;background-color:#181916">
+                    <ul class="staffList">
+                        <li v-for="child in rankGroup.children" class="staffElem"
+                            style="position:relative;height:30px;">
+                            <a class="submenuLink" v-bind:href="child.url" v-bind:title="child.name+' の詳細情報'"
+                                style="text-align:left;">
+                                <span style="display: inline-block;">
+
+                                    <img v-bind:src="child.latestHeroInfo.iconPath" class="" loading="lazy"
+                                        v-bind:alt="child.latestHeroInfo.name + 'の画像'" width="25" height="25">
+                                    <span style="font-size:14px;vertical-align: top;">{{child.name}}</span>
+                                </span>
+                            </a>
+                        </li>
+                    </ul>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <script>
+        let g_appData = null;
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let reloadSuffix = "20200918";
+            let scriptFileName = scriptFileNames[index];
+            let src = scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener("load", function (e) {
+            const startTime = Date.now();
+            loadScripts([
+                "/FehTools/TierList/Utilities.js?20250803_2",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/TierList/IllustCountRankingApp.js?20250803_2",
+            ], () => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load all scripts`);
+
+                g_appData = new AppData();
+                const app = new Vue({
+                    data: g_appData,
+                    el: "#app",
+                    methods: {
+                        updateRanks() {
+                            g_appData.updateRankGroups();
+                        },
+                        setBoolOptions(target, value) {
+                            setPropValues(target, value);
+                            g_appData.updateRankGroups();
+                        },
+                        syncWeaponsFromColors(id, value) {
+                            g_appData.syncWeaponsFromColors(id, value);
+                            g_appData.updateRankGroups();
+                        },
+                        calcStatusRankForSelectedHero() {
+                            g_appData.calcStatusRankForSelectedHero();
+                        },
+                    },
+                    mounted: () => {
+                        // コンポーネントがマウントされた後に実行される処理を記述します
+                        g_appData.init('Voice Cast (Japanese)', 'cv', () => {
+                            const loader = document.getElementById("loader");
+                            loader.style.display = "none";
+                            const app = document.getElementById("app");
+                            app.style.display = "";
+                        });
+                    }
+                });
+            });
+        });
+
+    </script>
+</body>
+
+</html>

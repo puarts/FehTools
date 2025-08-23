@@ -1,0 +1,265 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>全キャラの中で他のキャラの下位互換ステータスになるステータスを持つキャラの一覧です。</p>
+    <style>
+        .checkItem {
+            display: inline-block;
+            padding: 5px;
+        }
+
+        .labeled {
+            font-size: 11px;
+            background-color: lightblue;
+            padding: 1px 5px;
+            border: solid 1px #777;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .status {
+            padding: 5px;
+            display: inline-block;
+        }
+
+        .settingField {
+            background-color: #f0f0f0;
+        }
+
+        .settingSubField {
+            background-color: #f9f9f9;
+        }
+    </style>
+    <div class="sk-fading-circle" id="loader">
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+    <div id="app" style="display: none;">
+        <fieldset style="margin-top: 10px;" class="settingField">
+            <legend>評価方法</legend>
+            <div class="checkItem">
+                <input id="isDragonflowerEnabled" type="checkbox" v-model="isDragonflowerEnabled"
+                    @change="update"><label for="isDragonflowerEnabled">神竜の花最大</label>
+            </div>
+            <div class="checkItem">
+                <input id="isResplendentEnabled" type="checkbox" v-model="isResplendentEnabled" @change="update"><label
+                    for="isResplendentEnabled">神装補正あり</label>
+            </div>
+            <div class="checkItem">
+                <input id="excludesOriginalWeapon" type="checkbox" v-model="excludesOriginalWeapon"
+                    @change="update"><label for="excludesOriginalWeapon">専用スキル持ちを除外</label>
+            </div>
+            <div class="checkItem">
+                <input id="excluedsRefreshSkill" type="checkbox" v-model="excluedsRefreshSkill" @change="update"><label
+                    for="excluedsRefreshSkill">再行動持ちを除外</label>
+            </div>
+            <div class="checkItem">
+                <input id="comparesSameOriginOnly" type="checkbox" v-model="comparesSameOriginOnly"
+                    @change="update"><label for="comparesSameOriginOnly">同じ出典のみ比較</label>
+            </div>
+        </fieldset>
+        <details>
+            <summary>その他の設定</summary>
+            <fieldset class="settingField">
+                <legend>評価対象の絞り込み</legend>
+                <!-- <dl>
+                <dt>移動タイプ</dt>
+                <dd>
+                    <select v-model="targetMoveType" @change="update">
+                        <option v-for="value in MoveType" v-bind:value="value">{{MoveTypeToStr[value]}}</option>
+                    </select>
+                </dd>
+                <dt>武器種</dt>
+                <dd>
+                    <select v-model="targetWeaponType" @change="update">
+                        <option v-for="value in WeaponType" v-bind:value="value">{{WeaponTypeToStr[value]}}</option>
+                    </select>
+                </dd>
+            </dl> -->
+                <fieldset class="settingSubField">
+                    <legend>種類</legend>
+                    <div v-for="item in targetHowToGet" class="checkItem">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="update"><label
+                            v-bind:for="item.domId">{{item.label}}</label>
+                    </div>
+                    <div style="clear:both;">
+                        <input type="button" @click="setBoolOptions(targetHowToGet, true)" value="全てオン">
+                        <input type="button" @click="setBoolOptions(targetHowToGet, false)" value="全てオフ">
+                    </div>
+                </fieldset>
+                <fieldset class="settingSubField">
+                    <legend>バージョン(部)</legend>
+                    <div v-for="item in targetBook" class="checkItem">
+                        <input v-bind:id="item.domId" type="checkbox" v-model="item.value" @change="update"><label
+                            v-bind:for="item.domId">
+                            {{item.label}}</label>
+                    </div>
+                    <div style="clear:both;">
+                        <input type="button" @click="setBoolOptions(targetBook, true)" value="全てオン">
+                        <input type="button" @click="setBoolOptions(targetBook, false)" value="全てオフ">
+                    </div>
+                </fieldset>
+            </fieldset>
+
+            <fieldset style="margin-top: 10px;" class="settingField">
+                <legend>詳細の表示方法</legend>
+                <div class="checkItem">
+                    <input id="showsBackwordList" type="checkbox" class="checkItem" v-model="showsBackwordList"
+                        @change="update"><label for="showsBackwordList">下位互換表示(or 上位互換表示)</label>
+                </div>
+                <div class="checkItem">
+                    <input id="showsHierarchy" type="checkbox" class="checkItem" v-model="showsHierarchy"
+                        @change="update"><label for="showsHierarchy">階層表示</label>
+                </div>
+                <div class="checkItem">
+                    <input id="showsMetaInfo" type="checkbox" class="checkItem" v-model="showsMetaInfo"
+                        @change="update"><label for="showsMetaInfo">詳細情報表示</label>
+                </div>
+
+            </fieldset>
+        </details>
+
+        <div style="padding:10px;">
+            {{hitCount}}体の下位互換ユニットが見つかりました
+        </div>
+
+        <fieldset>
+            <legend>一覧</legend>
+            <span v-for="(backwordOrForwardList, typeId) in backwordStatHeroIdList">
+                <div v-for="(infos, id) in backwordOrForwardList" style="display: inline-block;">
+                    <unit-summary v-bind:value="heroIdToInfo[id]"></unit-summary>
+                </div>
+            </span>
+        </fieldset>
+
+        <details open>
+            <summary>詳細(上位互換ユニット等)</summary>
+            <fieldset v-for="(backwordOrForwardList, typeId) in g_appData.getBackwordOrForwardList()">
+                <legend>{{typeIdToStr(typeId)}}</legend>
+                <div v-for="(infos, id) in backwordOrForwardList" style="margin-top:10px">
+                    <unit-detail v-bind:value="heroIdToInfo[id]"
+                        v-bind:status="heroInfoToStatuses[heroIdToInfo[id].id]"></unit-detail>
+                    <!-- {{heroIdToInfo[id].skillNames}} -->
+                    <fieldset style="background-color: #eee;">
+                        <legend>{{heroIdToInfo[id].name}}の{{showsBackwordList?"上位":"下位"}}互換ユニット</legend>
+                        <ul style="list-style:none;padding:0" v-if="showsMetaInfo">
+                            <li v-for="info in infos">
+                                <unit-detail v-bind:value="info"
+                                    v-bind:status="heroInfoToStatuses[info.id]"></unit-detail>
+                                <ul v-if="showsHierarchy && info.id in backwordOrForwardList" style="list-style:none;">
+                                    <li v-for="subinfo in backwordOrForwardList[info.id]">
+                                        <unit-detail v-bind:value="subinfo"
+                                            v-bind:status="heroInfoToStatuses[subinfo.id]"></unit-detail>
+                                        <ul v-if="subinfo.id in backwordOrForwardList" style="list-style:none;">
+                                            <li v-for="subsubinfo in backwordOrForwardList[subinfo.id]">
+                                                <unit-detail v-bind:value="subsubinfo"
+                                                    v-bind:status="heroInfoToStatuses[subsubinfo.id]"></unit-detail>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <ul v-else style="list-style:none;padding:0">
+                            <li v-for="info in infos" style="display: inline-block;">
+                                <a v-bind:href="info.url" v-bind:title="info.name"><img v-bind:src="info.iconPath"
+                                        width="50" height="50"></a>
+                            </li>
+                        </ul>
+                    </fieldset>
+                </div>
+            </fieldset>
+        </details>
+    </div>
+    <script type="text/x-template" id="unit-summary-template">
+        <a v-bind:href="value.url" v-bind:title="value.name"><img
+            v-bind:src="value.iconPath" width="50" height="50"></a>
+    </script>
+    <script type="text/x-template" id="unit-detail-template">
+        <table border="0">
+            <tr>
+                <td>
+                    <a v-bind:href="value.url" v-bind:title="value.name"><img
+                            v-bind:src="value.iconPath" width="40" height="40"></a>
+                </td>
+                <td>
+                    <span class="labeled">Ver.{{value.book}}</span>
+                    <span class="labeled" style="background-color: #bee">{{value.rarities.join('/')}}</span>
+                    <span class="labeled" style="background-color: #ebe">{{value.origin}}</span>
+                    <span class="labeled" style="background-color: #ebb">{{value.weaponSkillName}}</span>
+                    <br />
+                    <span class="status">{{status.join(', ')}}</span>
+                </td>
+            </tr>
+        </table>
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+    <script src="/FehTools/TierList/Utilities.js?20250803_2"></script>
+    <script src="/FehTools/TierList/HeroInfo.js?20240113"></script>
+    <script src="/FehTools/TierList/BackwordCompatibilityApp.js?20250803_2"></script>
+
+    <script>
+        let g_appData = null;
+        window.addEventListener("load", e => {
+            g_appData = new AppData();
+            const app = new Vue({
+                data: g_appData,
+                el: "#app",
+                methods: {
+                    update: () => g_appData.updateBackworkStatHeroes(),
+                    setBoolOptions(target, value) {
+                        setPropValues(target, value);
+                        g_appData.updateBackworkStatHeroes();
+                    },
+                },
+                mounted: () => {
+                    // コンポーネントがマウントされた後に実行される処理を記述します
+                    g_appData.init(() => {
+                        const loader = document.getElementById("loader");
+                        loader.style.display = "none";
+                        const app = document.getElementById("app");
+                        app.style.display = "";
+                    });
+                }
+            });
+
+            const DelayTimeForUnitAndStructureComponent = 0;
+            Vue.component('unit-detail', function (resolve, reject) {
+                setTimeout(function () {
+                    // resolve コールバックにコンポーネント定義を渡します
+                    resolve({
+                        props: ['value', 'status'],
+                        template: "#unit-detail-template"
+                    })
+                }, DelayTimeForUnitAndStructureComponent)
+            });
+            Vue.component('unit-summary', function (resolve, reject) {
+                setTimeout(function () {
+                    // resolve コールバックにコンポーネント定義を渡します
+                    resolve({
+                        props: ['value', 'status'],
+                        template: "#unit-summary-template"
+                    })
+                }, DelayTimeForUnitAndStructureComponent)
+            });
+        });
+    </script>
+</body>
+
+</html>

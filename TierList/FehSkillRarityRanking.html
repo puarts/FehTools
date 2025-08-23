@@ -1,0 +1,238 @@
+<meta charset="utf8" />
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/main.css?20201219">
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>スキルの入手難易度ランキングです。</p>
+    <details>
+        <summary>評価方法</summary>
+        <div style='background-color:#ddd;border: solid 1px #999;padding:5px;'>
+            <p>入手難易度は以下の順で高いとしています。</p>
+            <p>
+                魔器 &gt; 超英雄★5 &gt; 超英雄★4 &gt; 攻撃神階 &gt; その他の伝承神階 &gt; 恒常★5 &gt; 聖杯 &gt; 聖印あり &gt; 恒常★4(★5習得) &gt;
+                恒常★4(★4習得)
+            </p>
+            <p>
+                伝承神階と超英雄についてはTwitterのアンケートで超英雄の方が貴重だとの回答が大多数でしたので、★4含めて超英雄の評価を高くしています。
+            </p>
+            <p>
+                攻撃神階は限界突破を優先する人が多いだろうということで、他の伝承神階より難易度を高く評価しています。
+            </p>
+            <p>
+                ★4特別チャンスは恒常★5と一緒にしています。理由は、★4特別チャンスは数が多いため、狙って入手するのが難しく、一概に恒常★5限定より入手がしやすいとは言えないためです。
+            </p>
+        </div>
+    </details>
+    <p>
+        スキル名右下の数値は習得キャラ数です。
+    </p>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+    <script src="/FehTools/TierList/Utilities.js?20230520_2"></script>
+    <script src="/FehTools/TierList/SkillRankingApp.js?20230520_3"></script>
+
+    <style type='text/css'>
+        .skillIcon {
+            display: inline-block;
+            border: solid 1px #eee;
+            border-radius: 5px;
+            padding: 2px;
+            margin: 3px;
+            font-size: 14px;
+        }
+
+        .passiveA {
+            background-color: #ecc;
+        }
+
+        .passiveB {
+            background-color: #cce;
+        }
+
+        .passiveC {
+            background-color: #eec;
+        }
+
+        .special {
+            background-color: #ebe;
+        }
+
+        .support {
+            background-color: #beb;
+        }
+
+        .learnCount {
+            right: 0;
+            bottom: -5px;
+        }
+
+        .releaseDate {
+            left: 0;
+            bottom: -5px;
+        }
+
+        .combatManualImg {
+            left: -5px;
+            top: -6px;
+            width: 17px;
+            height: 17px;
+        }
+
+        .metaInfo {
+            text-shadow: #444 1px 1px 0px, #444 -1px 1px 0px, #444 1px -1px 0px, #444 -1px -1px 0px, #444 0px 1px 0px, #444 0px -1px 0px, #444 -1px 0px 0px, #444 1px 0px 0px;
+            pointer-events: none;
+            color: white;
+            position: absolute;
+        }
+
+        .iconHidden {
+            visibility: hidden;
+            display: none;
+            width: 0px;
+        }
+
+        .typeCheckStyle {
+            border: solid 1px #999;
+            border-radius: 5px;
+        }
+
+        .checkStyle {
+            display: inline-block;
+            float: left;
+            margin: 5px;
+        }
+
+        .checkLabel {
+            padding: 4px;
+        }
+
+        .spGroup {
+            color: white;
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+
+        <fieldset>
+            <legend>種類</legend>
+            <label class='checkStyle typeCheckStyle'><input id='supportCheckbox' type='checkbox' v-model="showSupport"
+                    @change="g_appData.filterSkills()"><span style='background-color:#beb'
+                    class='checkLabel'>補助</span></label>
+            <label class='checkStyle typeCheckStyle'><input id='specialCheckbox' type='checkbox' v-model="showSpecial"
+                    @change="g_appData.filterSkills()"><span style='background-color:#ebe'
+                    class='checkLabel'>奥義</span></label>
+            <label class='checkStyle typeCheckStyle'><input id='passiveACheckbox' type='checkbox' v-model="showPassiveA"
+                    @change="g_appData.filterSkills()"><span style='background-color:#ecc'
+                    class='checkLabel'>パッシブA</span></label>
+            <label class='checkStyle typeCheckStyle'><input id='passiveBCheckbox' type='checkbox' v-model="showPassiveB"
+                    @change="g_appData.filterSkills()"><span style='background-color:#cce'
+                    class='checkLabel'>パッシブB</span></label>
+            <label class='checkStyle typeCheckStyle'><input id='passiveCCheckbox' type='checkbox' v-model="showPassiveC"
+                    @change="g_appData.filterSkills()"><span style='background-color:#eec'
+                    class='checkLabel'>パッシブC</span></label>
+        </fieldset>
+        <fieldset>
+            <legend>SP</legend>
+            <label v-for="sp in Object.values(spVisibilities).sort((a, b) => b.label - a.label)"
+                class='checkStyle'><input id='passiveCCheckbox' v-model="sp.value" type='checkbox'
+                    @change="g_appData.filterSpGroups()">{{sp.label}}</label>
+        </fieldset>
+        <fieldset>
+            <legend>情報表示</legend>
+            <label class='checkStyle'><input id='learnCountCheckbox' type='checkbox'
+                    v-model="showLearnCount"><span>習得キャラ数</span></label>
+            <label class='checkStyle'><input id='releaseDateCheckbox' type='checkbox'
+                    v-model="showReleaseDate"><span>リリース日</span></label>
+        </fieldset>
+        <fieldset>
+            <legend>その他</legend>
+            <label class='checkStyle'><input id='combatManualCheckbox' type='checkbox'
+                    v-model="showSkillsInCombatManual" @change="g_appData.filterSkills()"><span><img
+                        src=https://fire-emblem.fun/images/FehIcons/CombatManual.png' width='25'
+                        height='25'>常設秘伝書にあるスキルを表示</span></label>
+        </fieldset>
+        <div style='padding:5px;float:left;clear:both'>
+            並び順:
+            <select v-model="sortMethod" @change="g_appData.filterSkills()">
+                <option v-for="value in SortMethodValues" v-bind:value="value">
+                    {{ getSortMethodLabel(value) }}
+                </option>
+            </select>
+
+        </div>
+        <div style='padding:5px;float:left;clear:both'>
+            文字列絞り込み: <input id='filterText' type='text' @input='g_appData.filterSkills()' v-model="skillNameFilterText">
+            <input type="button" value="クリア" @click="g_appData.clearSKillNameFilter()">
+        </div>
+
+        <div style="clear:both"></div>
+        <table border="1">
+            <tr v-for="rankGroup in skillGroups">
+                <th v-bind:style="`background-color:${rankGroup.color}`">{{rankGroup.label}}</th>
+                <td style="text-align:left;background-color:#181916">
+                    <fieldset v-for="subgroup in rankGroup.subgroups" class="spGroup" v-show="subgroup.isVisible">
+                        <legend>{{subgroup.label}}</legend>
+                        <div v-for="typeGroup in subgroup.typeGroups" v-show="typeGroup.isVisible">
+                            <a v-for="skill in typeGroup.filteredSkills" v-bind:href="skill.getUrl()"
+                                v-bind:title="skill.name">
+                                <div v-bind:class="getTypeClassName(skill.type) + ' skillIcon displayTarget'"
+                                    style="position: relative">
+                                    <img v-bind:src="skill.getIconPath()"
+                                        @error="skill.updateIconPath();$event.target.src=skill.getIconPath();"
+                                        width="25" height="25">
+                                    {{skill.name}}
+                                    <span class="metaInfo learnCount displayTarget"
+                                        v-show="showLearnCount">{{skill.totalCount}}</span>
+                                    <span class="metaInfo releaseDate displayTarget"
+                                        v-show="showReleaseDate">{{skill.releaseDate}}</span>
+                                    <span class="metaInfo combatManualImg displayTarget"
+                                        v-if="skill.isCombatManualAvailable"><img
+                                            src="https://fire-emblem.fun/images/FehIcons/CombatManual.png"></span>
+                                </div>
+                            </a>
+                        </div>
+                    </fieldset>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        const g_appData = new AppData();
+        const vm = new Vue({
+            el: "#app",
+            data: g_appData,
+        });
+        window.addEventListener('load', (event) => {
+            g_appData.init(() => {
+                const loader = document.getElementById("loader");
+                loader.style.display = "none";
+                const app = document.getElementById("app");
+                app.style.display = "";
+            });
+        });
+    </script>
+</body>
+
+</html>
