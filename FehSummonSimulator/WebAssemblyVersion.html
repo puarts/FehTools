@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>share instance</title>
+</head>
+
+<body>
+  <script src="WasmInterface.js"></script>
+  <script>
+
+    function using(disposable, func) {
+      const result = func();
+      disposable.dispose();
+      return result;
+    }
+
+    /// 区間内の処理時間を計測するためのユーティリティークラスです。
+    class ScopedStopwatch {
+      constructor(logFunc) {
+        this._logFunc = logFunc;
+        this._startTime = Date.now();
+      }
+
+      dispose() {
+        const endTime = Date.now();
+        var diff = endTime - this._startTime;
+        this._logFunc(diff);
+      }
+    }
+
+    var module;
+    let SummonAverage;
+
+    function pointerToSummonAverageResult(pointer, averageSampleCount) {
+      // for (let i = 0; i < 13; ++i) {
+      //   console.log(`module.HEAPF32[${pointer / 4 + i}] = ${module.HEAPF32[pointer / 4 + i]}`);
+      // }
+
+      let result = {};
+      result.averageSummonCount = module.HEAPF32[pointer / 4];
+      result.averageLostOrbCount = module.HEAPF32[pointer / 4 + 1];
+      result.averageStar5PickupCount = module.HEAPF32[pointer / 4 + 2];
+      result.averageStar5Count = module.HEAPF32[pointer / 4 + 3];
+      result.averageStar5AndStar5PickupCount = module.HEAPF32[pointer / 4 + 4];
+      result.averageStar4PickupCount = module.HEAPF32[pointer / 4 + 5];
+      result.averageStar4Count = module.HEAPF32[pointer / 4 + 6];
+      result.averageStar3Count = module.HEAPF32[pointer / 4 + 7];
+
+      result.star3CountStdDev = module.HEAPF32[pointer / 4 + 8];
+      result.star4CountStdDev = module.HEAPF32[pointer / 4 + 9];
+      result.star5CountStdDev = module.HEAPF32[pointer / 4 + 10];
+      result.star5AndPickupCountStdDev = module.HEAPF32[pointer / 4 + 11];
+      result.star4PickupCountStdDev = module.HEAPF32[pointer / 4 + 12];
+      result.star5PickupCountStdDev = module.HEAPF32[pointer / 4 + 13];
+
+
+      result.star4PickupWorstCount = module.HEAP32[pointer / 4 + 14];
+      result.star4PickupBestCount = module.HEAP32[pointer / 4 + 15];
+      result.star5PickupWorstCount = module.HEAP32[pointer / 4 + 16];
+      result.star5PickupBestCount = module.HEAP32[pointer / 4 + 17];
+      result.star5WorstCount = module.HEAP32[pointer / 4 + 18];
+      result.star5BestCount = module.HEAP32[pointer / 4 + 19];
+      result.star5AndStar5PickupWorstCount = module.HEAP32[pointer / 4 + 20];
+      result.star5AndStar5PickupBestCount = module.HEAP32[pointer / 4 + 21];
+
+      let offset = 22;
+      {
+        let star5PickupIdAndCountsPtr = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        let star5PickupIdAndCountsLength = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        result.star5PickupIdAndCounts = {};
+        for (let i = 0; i < star5PickupIdAndCountsLength; ++i) {
+          let id = module.HEAP32[star5PickupIdAndCountsPtr / 4 + i * 8];
+          let count = module.HEAPF32[star5PickupIdAndCountsPtr / 4 + i * 8 + 1];
+          result.star5PickupIdAndCounts[id] = count;
+        }
+      }
+
+      {
+        let star5IdAndCountsPtr = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        let star5IdAndCountsLength = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        result.star5IdAndCounts = {};
+        for (let i = 0; i < star5IdAndCountsLength; ++i) {
+          let id = module.HEAP32[star5IdAndCountsPtr / 4 + i * 8];
+          let count = module.HEAPF32[star5IdAndCountsPtr / 4 + i * 8 + 1];
+          result.star5IdAndCounts[id] = count;
+        }
+      }
+
+      {
+        let star4PickupIdAndCountsPtr = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        let star4PickupIdAndCountsLength = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        result.star4PickupIdAndCounts = {};
+        for (let i = 0; i < star4PickupIdAndCountsLength; ++i) {
+          let id = module.HEAP32[star4PickupIdAndCountsPtr / 4 + i * 8];
+          let count = module.HEAPF32[star4PickupIdAndCountsPtr / 4 + i * 8 + 1];
+          result.star4PickupIdAndCounts[id] = count;
+        }
+      }
+
+      result.couldGetStar4PickupHeroCount = module.HEAP32[pointer / 4 + offset];
+      ++offset;
+      result.couldGetStar4AndStar5PickupHeroCount = module.HEAP32[pointer / 4 + offset];
+      ++offset;
+      result.couldGetStar5HeroCount = module.HEAP32[pointer / 4 + offset];
+      ++offset;
+      result.couldGetPickupHeroCount = module.HEAP32[pointer / 4 + offset];
+      ++offset;
+
+      {
+        let arrayPtr = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        let arrayLength = module.HEAP32[pointer / 4 + offset];
+        ++offset;
+        result.couldGetPickupHeroCount = {};
+        for (let i = 0; i < arrayLength; ++i) {
+          let id = module.HEAP32[arrayPtr / 4 + i * 8];
+          let count = module.HEAPF32[arrayPtr / 4 + i * 8 + 1];
+          result.couldGetPickupHeroCount[id] = count;
+        }
+      }
+
+      // 互換用
+      {
+        result.pickupCountStdDev = result.star5PickupCountStdDev;
+        result.pickupWorstCount = result.star5PickupWorstCount;
+        result.pickupBestCount = result.star5PickupBestCount;
+
+        result.totalSummonCount = result.averageSummonCount * averageSampleCount;
+        result.lostOrbCount = result.averageLostOrbCount * averageSampleCount;
+
+        result.pickupCount = result.averageStar5PickupCount * averageSampleCount;
+        result.star5Count = result.averageStar5Count * averageSampleCount;
+        result.star4Count = result.averageStar4Count * averageSampleCount;
+        result.star4PickupCount = result.averageStar4PickupCount * averageSampleCount;
+        result.star3Count = result.averageStar3Count * averageSampleCount;
+
+        result.pickupHeroes = result.star5PickupIdAndCounts;
+        result.star4PickupHeroes = result.star4PickupIdAndCounts;
+
+        // result.couldGetPickupHeroCount = couldGetPickupHeroCount;
+        // result.couldGetStar4PickupHeroCount = couldGetStar4PickupHeroCount;
+        // result.couldGetStar4AndStar5PickupHeroCount = couldGetStar4AndStar5PickupHeroCount;
+        // result.couldGetPickupHeroCount = couldGetPickupHeroCount;
+        // result.couldGetStar5HeroCount = couldGetStar5HeroCount;
+        // result.couldGetStar5PickupHeroCount = couldGetStar5PickupHeroCount;
+      }
+
+      return result;
+    }
+
+
+    function deleteSummonAverageResult(buffer) {
+      if (buffer == null) {
+        return;
+      }
+
+      var funcPointer = module.cwrap('deleteSummonAverageResultPointer', null, ['number']);
+      funcPointer(buffer);
+    }
+
+    function allocFloatArray(floatArray) {
+      if (floatArray.length == 0) {
+        return null;
+      }
+      var pointer = module._malloc(floatArray.length * 4);
+      var offset = pointer / 4;
+      module.HEAPF32.set(floatArray, offset);
+      return pointer;
+    }
+
+    function allocIntArray(int32Array) {
+      if (int32Array.length == 0) {
+        return null;
+      }
+      var pointer = module._malloc(int32Array.length * 4);
+      var offset = pointer / 4;
+      module.HEAP32.set(int32Array, offset);
+      return pointer;
+    }
+    function freeBuffer(buffer) {
+      if (buffer == null) {
+        return;
+      }
+
+      var freePointer = module.cwrap('freePointer', null, ['number']);
+      freePointer(buffer);
+    }
+
+    function summonAverage(
+      summonMode,
+      orbCountOrSummonCount,
+      averageSampleCount,
+      targetPickCount,
+      startTryCount,
+      in_summonColorPriority,
+      in_initRates,
+      in_pickColors,
+      in_star3Counts,
+      in_star4Counts,
+      in_star5PickupIds, in_star5PickupColors,
+      in_star5Ids, in_star5Colors,
+      in_star4PickupIds, in_star4PickupColors,
+    ) {
+      let initRates = allocFloatArray(in_initRates);
+      let star3Counts = allocIntArray(in_star3Counts);
+      let star4Counts = allocIntArray(in_star4Counts);
+      let pickColors = allocIntArray(in_pickColors);
+      let star5PickupIds = allocIntArray(in_star5PickupIds);
+      let star5PickupColors = allocIntArray(in_star5PickupColors);
+      let star5Ids = allocIntArray(in_star5Ids);
+      let star5Colors = allocIntArray(in_star5Colors);
+      let summonColorPriority = allocIntArray(in_summonColorPriority);
+      let star4PickupIds = allocIntArray(in_star4PickupIds);
+      let star4PickupColors = allocIntArray(in_star4PickupColors);
+      resultPointer = SummonAverage(
+        summonMode,
+        orbCountOrSummonCount,
+        averageSampleCount,
+        targetPickCount,
+        startTryCount,
+        initRates,
+        summonColorPriority,
+        star3Counts,
+        star4Counts,
+        pickColors, in_pickColors.length,
+        star5PickupIds, star5PickupColors, in_star5PickupIds.length,
+        star5Ids, star5Colors, in_star5Ids.length,
+        star4PickupIds, star4PickupColors, in_star4PickupIds.length
+      );
+      let summonAverageResult = pointerToSummonAverageResult(resultPointer, averageSampleCount);
+      console.log(summonAverageResult);
+      freeBuffer(initRates);
+      freeBuffer(star3Counts);
+      freeBuffer(star4Counts);
+      freeBuffer(pickColors);
+      freeBuffer(star5PickupIds);
+      freeBuffer(star5PickupColors);
+      freeBuffer(star5Ids);
+      freeBuffer(star5Colors);
+      freeBuffer(star4PickupIds);
+      freeBuffer(star4PickupColors);
+      freeBuffer(summonColorPriority);
+    }
+
+    fetch('WasmInterface.wasm')
+      .then(response => response.arrayBuffer())
+      .then(buffer => new Uint8Array(buffer))
+      .then(binary => {
+        var promise = Module({
+          wasmBinary: binary,
+          onRuntimeInitialized: () => {
+            promise.then(result => {
+              module = result;
+              SummonAverage = module.cwrap(
+                'SummonAverage',
+                'number',
+                [
+                  'number',
+                  'number',
+                  'number',
+                  'number',
+                  'number',
+                  'number',
+                  'number', 'number', 'number',
+                  'number', 'number',
+                  'number', 'number', 'number',
+                  'number', 'number', 'number',
+                  'number', 'number', 'number'
+                ]
+              );
+
+              const Color = {
+                Red: 0,
+                Green: 1,
+                Blue: 2,
+                Colorless: 3,
+              };
+              const SummonMode = {
+                OrbCount: 0,
+                SummonCount: 1
+              };
+
+              // setTimeout(function tmp() {
+              using(new ScopedStopwatch(time => console.log("SummonAverage: " + time + " ms")), () => {
+                summonAverage(
+                  SummonMode.SummonCount,
+                  3000,
+                  10000,
+                  0,
+                  0,
+                  [Color.Red, Color.Green, Color.Blue, Color.Colorless],
+                  [0.03, 0.03, 0.0, 0.58],
+                  [Color.Red, Color.Green, Color.Blue, Color.Colorless],
+                  [0, 0, 0, 1],
+                  [0, 1, 0, 0],
+                  [13], [Color.Blue],
+                  [11], [Color.Red],
+                  [], []
+                );
+              });
+              // }, 0);
+            });
+          }
+        });
+      });
+
+  </script>
+</body>
+
+</html>

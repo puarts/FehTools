@@ -1,0 +1,310 @@
+<html>
+
+<head></head>
+
+<body>
+    <p>予算オーブ分を一気にシミュレーションして召喚結果を表示します。ページ下部に召喚イベントの概要や排出キャラ一覧、簡易的な確率表があります。</p>
+    <style>
+        .radioButton {
+            display: inline-block;
+        }
+    </style>
+    <div id="app">
+        <p>
+            <label><b>モード:</b></label><br />
+            <select v-model="mode">
+                <option v-for="option in modeOptions" v-bind:value="option.value">
+                    {{ option.text }}
+                </option>
+            </select>
+        </p>
+        <details style="background-color: #eee;border: solid 1px #aaa;padding:5px;font-size: 14px;">
+            <summary>使い方</summary>
+            <p v-if="mode==SimMode.Normal">
+                「予算オーブ数」もしくは「召喚回数」を入力し、「召喚する色」を選択して下さい。「結果を更新」ボタンを押すと召喚結果が下部に表示されます。
+            </p>
+            <p v-else-if="mode==SimMode.Average">
+                複数回の召喚結果の平均を表示します。「目標数」を入力すると平均を取る回数繰り返した際に、この目標数ピックアップキャラや☆5が引けた試行回数を表示します。
+            </p>
+            <p v-else-if="mode==SimMode.Graph">
+                「予算オーブ数」に至るまでにオーブ数に対して「目標数」引ける確率をグラフ化します。
+                「平均を取る回数」が大きいほど精度の高いグラフが出ますが、大きいほど計算に時間がかかります。
+            </p>
+            <p v-else-if="mode==SimMode.CoeffOfVariationGraph">
+                「予算オーブ数」でシミュレートを「サンプル数」回繰り返し、☆5が引けた数の「変動係数」(ばらつき)をグラフ化します。
+                「平均を取る回数」が大きいほど精度の高いグラフが出ますが、大きいほど計算に時間がかかります。
+            </p>
+            <p v-else-if="mode==SimMode.ColorPatternProbability">
+                全召喚色の組み合わせで「予算オーブ数」によるシミュレートを「平均を取る回数」繰り返し、☆5がより多く引ける召喚色の組み合わせを一覧表示します。
+            </p>
+        </details>
+        <fieldset style="background-color: #eee;">
+            <legend>設定</legend>
+            <p v-if="mode != SimMode.Graph && mode != SimMode.CoeffOfVariationGraph">
+                <label class="radioButton"><input type="radio" v-model="summonMode" value="0">予算オーブ数で一括</label>
+                <label class="radioButton"><input type="radio" v-model="summonMode" value="1">召喚回数で一括</label>
+                <label class="radioButton"><input type="radio" v-model="summonMode" value="2">☆5が一定数出るまで</label>
+                <label class="radioButton"><input type="radio" v-model="summonMode" value="3">確率がリセットされるまで</label>
+            </p>
+            <p
+                v-if="summonMode == SummonMode.OrbCount || mode == SimMode.Graph || mode == SimMode.CoeffOfVariationGraph">
+                <label><b>予算オーブ数:</b></label><br />
+                <input type="number" v-model="ownOrbCount" min="5" />
+            </p>
+            <p v-else-if="summonMode == SummonMode.SummonCount && mode != SimMode.Graph">
+                <label><b>召喚回数:</b></label><br />
+                <input type="number" v-model="summonCount" min="5" />
+            </p>
+            <p v-else-if="summonMode == SummonMode.UntilSummonStar5 && mode != SimMode.Graph">
+                <label><b>召喚☆5数:</b></label><br />
+                <input type="number" v-model="summonStar5Count" min="1" />
+            </p>
+            <p v-if="summonMode == SummonMode.UntilSummonStar5 && mode != SimMode.Graph">
+                <label><b>狙うピックアップ:</b></label><br />
+                <select v-model="targetPickupIndex">
+                    <option v-for="(name,index) in ['なし'].concat(pickupHeroNames)" v-bind:value="index-1">
+                        {{ name }}
+                    </option>
+                </select>
+            </p>
+            <p>
+            <form name="summonColorForm" v-if="mode != SimMode.ColorPatternProbability">
+                <label><b>召喚する色:</b></label><br />
+                <input type="checkbox" name="summonColorChecks" id="redCheck" value="red" v-model="summonColors"><label
+                    for="redCheck"><img src="/images/feh/feh_orb_red.png" width="20" alt="赤オーブの画像" /></label></input>
+                <input type="checkbox" name="summonColorChecks" id="blueCheck" value="blue"
+                    v-model="summonColors"><label for="blueCheck"><img src="/images/feh/feh_orb_blue.png" width="20"
+                        alt="青オーブの画像" /></label></input>
+                <input type="checkbox" name="summonColorChecks" id="greenCheck" value="green"
+                    v-model="summonColors"><label for="greenCheck"><img src="/images/feh/feh_orb_green.png" width="20"
+                        alt="緑オーブの画像" /></label></input>
+                <input type="checkbox" name="summonColorChecks" id="colorlessCheck" value="colorless"
+                    v-model="summonColors"><label for="colorlessCheck"><img src="/images/feh/feh_orb_colorless.png"
+                        width="20" alt="無オーブの画像" /></label></input>
+            </form>
+            </p>
+            <label><b>召喚色の優先順位(ドラッグで並べ替え可):</b></label><br />
+            <draggable :list="colorPrirorities" style="width: 280px;">
+                <span v-for="(item, index) in colorPrirorities">
+                    <span style="font-weight: bold; font-size:12px; position:absolute">
+                        <div style="color:red; ">
+                            {{index+1}}</div>
+                    </span>
+                    <img v-bind:src="getOrbImgSrcUrl(item)" style="margin: 5px;" width="24" v-bind:alt="item">
+                </span>
+            </draggable>
+            <p
+                v-if="mode==SimMode.Average || mode==SimMode.Graph || mode==SimMode.CoeffOfVariationGraph|| mode==SimMode.ColorPatternProbability">
+                <label><b>平均を取る回数:</b></label><br />
+                <input type="number" min="1" value="1" v-model="averageSampleCount" />
+            </p>
+            <p v-if="mode==SimMode.Average || mode==SimMode.Graph">
+                <label><b>目標数:</b></label><br />
+                <input type="number" v-model="targetPickupCount" min="1" value="1" />
+            </p>
+            <details>
+                <summary>詳細設定</summary>
+                <p>
+                    <label><input type="checkbox" v-model="isPickupChargeEnabled">ピックアップチャージ有効</label>
+                </p>
+                <p>
+                    <label><b>開始時の☆4以下連続数(開始時の確率上昇):</b></label><br />
+                    <input type="number" min="0" value="0" v-model="startTryCount"
+                        @change="calcCurrentStar5PickupRate()" /><br />(開始時の☆5ピックアップ提供割合{{startStar5PickupRate}}%)
+                </p>
+                <p v-if="mode==SimMode.Graph || mode==SimMode.CoeffOfVariationGraph">
+                    <label><b>サンプル数:</b></label><br />
+                    <input type="number" min="3" value="10" v-model="graphSampleCount" />
+                </p>
+                <p v-if="mode==SimMode.Graph || mode==SimMode.CoeffOfVariationGraph">
+                    <label><b>サンプリングオフセット:</b></label><br />
+                    <input type="number" min="0" v-bind:max="graphSampleCount" v-model="samplingOffset" />
+                </p>
+                <p v-if="mode==SimMode.CoeffOfVariationGraph">
+                    <label for="showMaxDeviationGraph"><b>標準偏差の代わりに偏差最大値を計算に使用:</b></label><br />
+                    <input id="showMaxDeviationGraph" type="checkbox" v-model="showMaxDeviationGraph" />
+                </p>
+                <p v-if="mode==SimMode.Graph || mode==SimMode.CoeffOfVariationGraph">
+                    <label for="stopsSamplingIfGraphIsConsistent">
+                        <input id="stopsSamplingIfGraphIsConsistent" type="checkbox"
+                            v-model="stopsSamplingIfGraphIsConsistent" />確率上昇しなくなったら計算を打ち止める</label>
+                </p>
+                <p v-if="summonMode == SummonMode.UntilSummonStar5">
+                    <label for="summonAllOrbsIfSummonedStar5">
+                        <input id="summonAllOrbsIfSummonedStar5" type="checkbox"
+                            v-model="summonAllOrbsIfSummonedStar5" />★5が出た時、同じ盤面の狙った召喚色を全部引く</label>
+                </p>
+                <p v-if="mode==SimMode.Average">
+                    <label><b>カウントする召喚数の閾値:</b></label><br />
+                    <input type="number" value="0" v-model="summonCountThresholdToCount" />
+                </p>
+
+                <p>
+                    <!-- <label><input type="checkbox" v-model="useWasm">高速モード</label> -->
+                    <label><input type="checkbox" v-model="isWebWorkerEnabled">ウェブワーカーの使用</label>
+                </p>
+                <p>
+                    <label><b>ウェブワーカー数:</b></label><br />
+                    <input type="number" v-model="webWorkerCount">
+                </p>
+            </details>
+            <details v-if="isDebugModeEnabled">
+                <summary>開発者向けの設定</summary>
+                <p>
+                    <label><input type="checkbox" v-model="useWasm">wasmの有効化</label>
+                </p>
+                <p>
+                    <label><b>wasm有効時の疑似乱数生成アルゴリズム:</b></label><br />
+                    <select v-model="randAlgorithm">
+                        <option v-for="option in RandAlgorithmOptions" v-bind:value="option.value">
+                            {{ option.text }}
+                        </option>
+                    </select>
+                </p>
+                <p>
+                    <label><b>すり抜け時の確率低下の試行回数</b></label><br />
+                    <input type="number" v-model="g_sim.nonPickupDecrementCount" />
+                </p>
+                <p>
+                    <label><input type="checkbox" v-model="isSpecialStar4Enabled"
+                            @input="specialStar4Changed()">★4特別チャンス有効</label>
+                </p>
+            </details>
+        </fieldset>
+        <p>
+            <input type="button" value="結果を更新" v-on:click="summon" />
+        </p>
+        <p
+            v-if="mode==SimMode.Graph || mode== SimMode.Average || mode==SimMode.CoeffOfVariationGraph || mode==SimMode.ColorPatternProbability">
+            {{progressLog}}
+        </p>
+        <p>
+        <div v-html="summonOutput"
+            v-if="mode==SimMode.Average || mode==SimMode.Normal || mode==SimMode.ColorPatternProbability"></div>
+        </p>
+        <p v-if="mode==SimMode.Normal">
+        <div v-html="summonLog" v-if="mode==SimMode.Normal"></div>
+        </p>
+        <p v-if="(mode==SimMode.Graph || mode==SimMode.CoeffOfVariationGraph) && isGraphCreated">
+            線の表示:
+            <input type="checkbox" v-model="elem.value" v-for="elem in graphEnabledValues"
+                @change="enabledGraphChanged">
+            <br />
+        <div class="chart-container" style="min-height: 500px;">
+            <canvas id="graphCanvas"></canvas>
+        </div>
+        </p>
+        <p>
+            <label><input type="checkbox" v-model="isDebugModeEnabled">デバッグモード</label>
+
+        </p>
+    </div>
+
+    <link rel="preconnect" href="//cdnjs.cloudflare.com">
+    <link rel="preconnect" href="//code.jquery.com">
+
+    <script defer src="//cdnjs.cloudflare.com/ajax/libs/vue/2.5.2/vue.min.js"></script>
+    <script defer src="//cdn.jsdelivr.net/npm/sortablejs@1.8.4/Sortable.min.js"></script>
+    <script defer src="//cdnjs.cloudflare.com/ajax/libs/Vue.Draggable/2.20.0/vuedraggable.umd.min.js"></script>
+    <script defer src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.1.4/Chart.bundle.min.js"></script>
+
+    <script>
+        function setupSimulator() {
+            /* autogen code here */
+
+            const sim = new FehSummonSimulator(
+                initPickRate,
+                initStar4Rate,
+                initStar4SpecialRate,
+                initSpecialHeroStar4SpecialRate,
+                initStar4PickRate,
+                initStar5Rate,
+                star3ColorCounts,
+                star4ColorCounts,
+                star4SpecialColorCounts,
+                specialHeroStar4SpecialColorCounts,
+                star5ColorCounts,
+                star4PickupHeroIds,
+                pickupIcons,
+                pickColorCounts,
+                heroIds,
+                heroColors,
+                star4SpecialIcons,
+                star4SpecialHeroIds,
+                star4SpecialHeroColors,
+                specialHeroStar4SpecialIcons,
+                specialHeroStar4SpecialHeroIds,
+                specialHeroStar4SpecialHeroColors,
+                star5Icons,
+                star5HeroIds,
+                star5HeroColors,
+                pickupHeroNames,
+                nonPickupDecrementCount
+            );
+
+            initSummonSimulatorAppData(sim, pickupIcons, pickupHeroNames);
+
+            dataObj.isPickupChargeEnabled = isPickupChargeEnabled;
+
+            {
+                let count = pickupHeroNames.length;
+                if (star4PickupHeroIds.length > 0) {
+                    count += star4PickupHeroIds.length * 2;
+                }
+                count += 2;
+                for (let i = 0; i < count; ++i) {
+                    dataObj.graphEnabledValues.push({ label: `線${i}`, value: true });
+                }
+            }
+        }
+
+
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let jsRootPath = "/FehTools/FehSummonSimulator/";
+            let reloadSuffix = "20240704_1";
+            let scriptFileName = scriptFileNames[index];
+            let src = jsRootPath + scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener('load', (event) => {
+            additionalScripts = [
+                "WasmInterface.js",
+                "SummonFuncs.js",
+                "FehSummonSimulator.js",
+                "WasmWrapper.js",
+                "AppData.js",
+            ];
+            if (window.location.hostname == "localhost" || window.location.hostname == "127.0.0.1") {
+                additionalScripts.push("SampleData.js");
+            }
+            loadScripts(additionalScripts, () => {
+                setupSimulator();
+            });
+        });
+
+    </script>
+</body>
+
+</html>
