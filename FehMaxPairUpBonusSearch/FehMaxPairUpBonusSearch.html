@@ -1,0 +1,340 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="/css/loading.css">
+</head>
+
+<body>
+    <p>FEHでダブル後衛にしたときに能力値上昇が最大になる英雄と個性や武器錬成の組み合わせ一覧です。武器は弓、暗器、青魔、緑魔が獅子奮迅効果を内蔵する武器、その他は銀の剣など、最もステータスが盛れる汎用武器を装備する前提としています。
+    </p>
+    <style type='text/css'>
+        .skillIcon {
+            display: inline-block;
+            border: solid 1px #eee;
+            border-radius: 5px;
+            padding: 2px;
+            margin: 3px;
+            font-size: 14px;
+        }
+
+        .passiveA {
+            background-color: #ecc;
+        }
+
+        .passiveB {
+            background-color: #cce;
+        }
+
+        .passiveC {
+            background-color: #eec;
+        }
+
+        .special {
+            background-color: #ebe;
+        }
+
+        .support {
+            background-color: #beb;
+        }
+
+        .checkbox {
+            margin: 5px;
+            display: inline-block;
+        }
+
+        .asset {
+            color: blue;
+            font-weight: bold;
+        }
+
+        .settingContainer {
+            background-color: #eee;
+            border: solid 1px #999;
+        }
+
+        .settingContainerTitle {
+            background-color: #333;
+            color: white;
+            padding-left: 5px;
+        }
+
+        .settingSubContainer {
+            margin-bottom: 5px;
+            background-color: #fff;
+        }
+
+        .defaultCell {
+            text-align: center;
+        }
+    </style>
+
+    <div class="sk-fading-circle" id="loader">
+        <div class="feh_loading_anim"></div>
+        <div class="sk-circle1 sk-circle"></div>
+        <div class="sk-circle2 sk-circle"></div>
+        <div class="sk-circle3 sk-circle"></div>
+        <div class="sk-circle4 sk-circle"></div>
+        <div class="sk-circle5 sk-circle"></div>
+        <div class="sk-circle6 sk-circle"></div>
+        <div class="sk-circle7 sk-circle"></div>
+        <div class="sk-circle8 sk-circle"></div>
+        <div class="sk-circle9 sk-circle"></div>
+        <div class="sk-circle10 sk-circle"></div>
+        <div class="sk-circle11 sk-circle"></div>
+        <div class="sk-circle12 sk-circle"></div>
+
+    </div>
+
+    <div id="app" style="display: none;">
+        <p><b>{{initMessage}}</b></p>
+        <details open class="settingContainer">
+            <summary class="settingContainerTitle">検索条件</summary>
+            <fieldset class="settingSubContainer">
+                <legend>開花</legend>
+                <span v-for="prop in displayAscendedTraitsEnabled" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>召喚師との絆S</legend>
+                <span v-for="prop in displaySummonerSupportEnabled" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>入手法</legend>
+                <span v-for="prop in displayHowToGet" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+                <div style="clear:both;">
+                    <input type="button" value="全てオン" @click="setBoolOptions(displayHowToGet, true)">
+                    <input type="button" value="全てオフ" @click="setBoolOptions(displayHowToGet, false)">
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>排出レアリティ</legend>
+                <span v-for="prop in displayRarity" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>Aスキル</legend>
+                <span v-for="prop in displayASkill" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+                <div style="clear:both;">
+                    <input type="button" value="全てオン" @click="setBoolOptions(displayASkill, true)">
+                    <input type="button" value="全てオフ" @click="setBoolOptions(displayASkill, false)">
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>聖印</legend>
+                <span v-for="prop in displaySacredSeal" class="checkbox">
+                    <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                        v-bind:for="prop.domId">{{prop.label}}</label>
+                </span>
+                <div style="clear:both;">
+                    <input type="button" value="全てオン" @click="setBoolOptions(displaySacredSeal, true)">
+                    <input type="button" value="全てオフ" @click="setBoolOptions(displaySacredSeal, false)">
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>その他</legend>
+                <div>
+                    検索名(空白区切りで複数可): <input type="text" v-model="searchHeroName">
+                </div>
+                <div>
+                    除外名(空白区切りで複数可): <input type="text" v-model="excludeHeroName">
+                </div>
+            </fieldset>
+        </details>
+        <details open class="settingContainer">
+            <summary class="settingContainerTitle">評価方法</summary>
+            <fieldset class="settingSubContainer">
+                <legend>神竜の花の評価</legend>
+                <label for="dragonflowerOffsetN" class="checkbox"><input type="radio" id="dragonflowerOffsetN"
+                        value="-1" v-model="dragonflowerOffset" />
+                    指定数</label>
+                <label for="dragonflowerOffset0" class="checkbox"><input type="radio" id="dragonflowerOffset0" value="0"
+                        v-model="dragonflowerOffset" />
+                    現在の上限</label>
+                <label for="dragonflowerOffset1" class="checkbox"><input type="radio" id="dragonflowerOffset1" value="1"
+                        v-model="dragonflowerOffset" />
+                    1年後の上限</label>
+                <label for="dragonflowerOffset2" class="checkbox"><input type="radio" id="dragonflowerOffset2" value="2"
+                        v-model="dragonflowerOffset" />
+                    2年後の上限</label>
+                <label for="dragonflowerOffset3" class="checkbox"><input type="radio" id="dragonflowerOffset3" value="3"
+                        v-model="dragonflowerOffset" />
+                    3年後の上限</label>
+                <div v-show="g_appData.useSpecifiedDragonflower">
+                    神竜の花の数の指定: <input type="number" v-model="dragonflowers">
+                </div>
+            </fieldset>
+            <fieldset class="settingSubContainer">
+                <legend>限界突破</legend>
+                <span v-for="(n, value) in 11">
+
+                    <label :for="`merge${value}`" class="checkbox"><input type="radio" :id="`merge${value}`"
+                            :value="value" v-model="merges" />
+                        +{{value}}</label>
+                </span>
+
+            </fieldset>
+
+        </details>
+        <details class="settingContainer">
+            <summary class="settingContainerTitle">表示列</summary>
+            <span v-for="prop in displayColumns" class="checkbox">
+                <input type="checkbox" v-bind:id="prop.domId" v-model="prop.value"><label
+                    v-bind:for="prop.domId">{{prop.label}}</label>
+            </span>
+
+        </details>
+
+        <div style="text-align: left;margin-top: 10px;">
+            <input type="button" value="一覧を更新" style="width: 100px" @click="updateResults"><br /><span
+                style="font-size:12px">(注意:該当数が多いと時間がかかります)</span>
+        </div>
+        <div style="margin: 5px;">{{searchMessage}}
+        </div>
+        <div>
+            <table border="1">
+                <tr>
+                    <th>名前</th>
+                    <th v-for="col in displayColumns" v-if="col.value">
+                        {{col.label}}
+                    </th>
+                    <th>スキル</th>
+                    <th>攻撃</th>
+                    <th>速さ</th>
+                    <th>守備</th>
+                    <th>魔防</th>
+                </tr>
+                <tr v-for="result in results">
+                    <td style="text-align: center;font-size: 12px;">
+                        <a v-bind:href="result.heroInfo.url" v-bind:title="result.heroInfo.name + 'の詳細'">
+                            <img v-bind:src="result.heroInfo.iconPath" width="40" height="40"
+                                v-bind:alt="result.heroInfo.name"><br />{{result.heroInfo.name}}
+                        </a>
+                    </td>
+                    <td v-if="displayColumns[0].value" class="defaultCell">★{{result.heroInfo.rarityStr}}</td>
+                    <td v-if="displayColumns[1].value" class="defaultCell">{{result.heroInfo.howToGet}}</td>
+                    <td v-if="displayColumns[2].value" class="defaultCell">+{{result.merges}}</td>
+                    <td v-if="displayColumns[3].value" class="defaultCell">
+                        +{{result.dragonflowers}}</td>
+                    <td v-if="displayColumns[4].value" class="defaultCell">{{AssetIndexToLabel[result.asset1Index]}}
+                    </td>
+                    <td v-if="displayColumns[5].value" class="defaultCell">{{AssetIndexToLabel[result.asset2Index]}}
+                    </td>
+                    <td v-if="displayColumns[6].value" class="defaultCell">{{result.isSummonerSupportEnabled ? "S" :
+                        "-"}}</td>
+                    <td style="font-size: 12px;">
+                        <img src="/AetherRaidTacticsBoard/images/Weapon.png" width="15"
+                            height="15">{{result.weapon}}<br />
+                        <img src="/AetherRaidTacticsBoard/images/A.png" width="15" height="15">{{result.passiveA}}<br />
+                        <img src="/AetherRaidTacticsBoard/images/S.png" width="15" height="15">{{result.sacredSeal}}
+                    </td>
+                    <td class="defaultCell">
+                        <span v-bind:class="result.atkClass">{{result.atk}}<span
+                                v-if="result.refineIndex == 0"><br />(錬成)</span></span>
+                    </td>
+                    <td class="defaultCell">
+                        <span v-bind:class="result.spdClass">{{result.spd}}<span
+                                v-if="result.refineIndex == 1"><br />(錬成)</span></span>
+                    </td>
+                    <td class="defaultCell">
+                        <span v-bind:class="result.defClass">{{result.def}}<span
+                                v-if="result.refineIndex == 2"><br />(錬成)</span></span>
+                    </td>
+                    <td class="defaultCell">
+                        <span v-bind:class="result.resClass">{{result.res}}<span
+                                v-if="result.refineIndex == 3"><br />(錬成)</span></span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+    <script src="/js/sql.js/dist/sql-wasm.js"></script>
+
+    <script>
+        // import { createApp, computed } from 'vue'
+        // import { AppData } from '/FehTools/TierList/StatusRankingApp.js';
+
+        let g_appData = null;
+        function createScriptElement(src, onloadFunc) {
+            let element = document.createElement("script");
+            element.type = "text/javascript";
+            element.src = src;
+            element.onload = onloadFunc;
+            // document.body.appendChild(element);
+            let headElement = document.getElementsByTagName('head')[0];
+            headElement.appendChild(element);
+        }
+
+        function loadScripts(scriptFileNames, allScriptLoaded, index = 0) {
+            if (index == scriptFileNames.length) {
+                allScriptLoaded();
+                return;
+            }
+
+            let reloadSuffix = "20240816_2";
+            let scriptFileName = scriptFileNames[index];
+            let src = scriptFileName + "?" + reloadSuffix;
+            const startTime = Date.now();
+            createScriptElement(src, x => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load ${src}`);
+                loadScripts(scriptFileNames, allScriptLoaded, ++index);
+            });
+        }
+
+        window.addEventListener("load", function (e) {
+            const startTime = Date.now();
+            loadScripts([
+                "/FehTools/TierList/Utilities.js",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/FehMaxPairUpBonusSearch/FehMaxPairUpBonusSearch.js",
+            ], () => {
+                const endTime = Date.now();
+                console.log(`${endTime - startTime} ms to load all scripts`);
+
+                g_appData = new AppData();
+                const app = new Vue({
+                    data: g_appData,
+                    el: "#app",
+                    methods: {
+                        updateResults() {
+                            g_appData.updateResults();
+                        },
+                        setBoolOptions(target, value) {
+                            setPropValues(target, value);
+                        },
+
+                    },
+                    mounted: () => {
+                        // コンポーネントがマウントされた後に実行される処理を記述します
+                        g_appData.init(() => {
+                            const loader = document.getElementById("loader");
+                            loader.style.display = "none";
+
+                            const app = document.getElementById("app");
+                            app.style.display = "";
+                        });
+                    }
+                });
+            });
+        });
+
+    </script>
+</body>
+
+</html>
