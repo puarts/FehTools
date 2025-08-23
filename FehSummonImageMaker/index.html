@@ -1,0 +1,564 @@
+<html>
+
+<head></head>
+
+<body>
+    <link rel="stylesheet" type="text/css" media="all"
+        href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.6/cropper.css" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.6/cropper.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/2.5.13/vue.min.js"></script>
+
+    <script type="text/javascript" src="/FehTools/FehSummonImageMaker/Main.js"></script>
+
+    <p>FEHの英雄召喚画像を作成するツールです。</p>
+    <p>好きな画像を選択して、サンプル画像のように召喚したい英雄の領域を切り出してください。あとはレアリティと称号、名前、セリフを入力すれば完成です。完成した画像は、画像としてデバイスに保存して下さい。</p>
+    <style>
+        .arrowButton {
+            border-style: none;
+            background-color: transparent;
+            width: 30px;
+            height: 30px;
+            background-size: 100%;
+        }
+
+        /* @font-face {
+            font-family: 'WebSubset_GenEiLateGoN';
+            src: url('GenEiLateGoN_v2.woff') format('woff'),
+                url('GenEiLateGoN_v2.ttf') format('truetype');
+        }
+
+        @font-face {
+            font-family: 'WebSubset_GenEiLateGoP';
+            src: url('GenEiLateGoP_v2.woff') format('woff'),
+                url('GenEiLateGoP_v2.ttf') format('truetype');
+        }*/
+
+        @font-face {
+            font-family: 'WebSubset_GenEiLateMinN';
+            src: url('/font/GenEiLateMinN_v2.woff') format('woff'),
+                url('/font/GenEiLateMinN_v2.ttf') format('truetype');
+        }
+
+        /* @font-face {
+            font-family: 'WebSubset_GenEiLateMinP';
+            src: url('GenEiLateMinP_v2.woff') format('woff'),
+                url('GenEiLateMinP_v2.ttf') format('truetype');
+        } */
+    </style>
+    <div id="app">
+        <p style="color: blue;">
+            {{message}}
+        </p>
+        <p>
+            選択範囲の外をタッチ移動すると画像をスクロールできます。また、選択範囲の外でピンチイン、ピンチアウトで画像をズームできます。
+        </p>
+        <p>
+            <input type="file" id="uploader">
+        </p>
+        <table border="0" style="border-style: none;">
+            <tr>
+                <td>
+                    <!-- <fieldset>
+                            <legend>画像の位置/スケール調整</legend> -->
+                    <table border="0" style="border-style: none;" v-if="false">
+                        <tr>
+                            <td>
+                                <p>
+                                    操作モード:<br />
+                                    <label><input type="radio" name="dragMode" value="1" checked="checked"
+                                            @change="cropper.setDragMode('crop')">範囲の選択</label>
+                                    <label><input type="radio" name="dragMode" value="0"
+                                            @change="cropper.setDragMode('move')">画像の移動、スケール</label>
+                                </p>
+                            </td>
+                        </tr>
+                        <!-- <tr>
+                                    <td>画像移動: </td>
+                                    <td>
+                                        <input type="button" @click="cropper.move(-10, 0)" class="arrowButton"
+                                            style="background-image: url('/FehSummonImageMaker/images/Arrow_Left.png'); ">
+                                        <input type="button" @click="cropper.move(10, 0)" class="arrowButton"
+                                            style="background-image: url('/FehSummonImageMaker/images/Arrow_Right.png'); ">
+                                        <input type="button" @click="cropper.move(0, -10)" class="arrowButton"
+                                            style="background-image: url('/FehSummonImageMaker/images/Arrow_Up.png'); ">
+                                        <input type="button" @click="cropper.move(0, 10)" class="arrowButton"
+                                            style="background-image: url('/FehSummonImageMaker/images/Arrow_Down.png'); ">
+
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>画像ズーム: </td>
+                                    <td>
+                                        <input type="button" value="＋" @click="cropper.zoom(0.1)">
+                                        <input type="button" value="－" @click="cropper.zoom(-0.1)">
+
+                                    </td>
+                                </tr> -->
+                    </table>
+
+                    <!-- </fieldset> -->
+                    <p>
+                        <input type="button" @click="setCropperDataForAllArea()" value="画像全体を切り出し範囲として選択">
+                    </p>
+                    <!-- <img id="sourceCanvas" style="width: 100%;"> -->
+
+                </td>
+            </tr>
+            <tr v-if="false">
+                <td>
+                    <br />
+                    (x:{{currentCropPosX}}, y:{{currentCropPosY}}, w:{{currentCropWidth}},
+                    h:{{currentCropHeight}})<br />
+                </td>
+            </tr>
+        </table>
+
+        <div id="cropperContainer">
+            <img src="/FehTools/FehSummonImageMaker/images/Byleth.png?20201121" id="sourceCanvas" style="width: 100%;" />
+        </div>
+        <fieldset>
+            <legend>できた画像</legend>
+            <label><input type="checkbox" v-model="usesOpaqueMessage" @change="inputChanged">セリフの背景を不透明に</label>
+            <table border="0" style="border-style: none;">
+                <tr v-if="false">
+                    <td>
+                        <p>
+                            操作モード:<br />
+                            <label><input type="radio" name="dragMode" value="1" checked="checked"
+                                    @change="cropper.setDragMode('crop')">範囲の選択</label>
+                            <label><input type="radio" name="dragMode" value="0"
+                                    @change="cropper.setDragMode('move')">画像の移動、スケール</label>
+                        </p>
+                    </td>
+                </tr>
+                <tr>
+                    <td>位置の微調整: </td>
+                    <td>
+                        <input type="button" @click="cropper.move(-2, 0)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehSummonImageMaker/images/Arrow_Left.png'); ">
+                        <input type="button" @click="cropper.move(2, 0)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehSummonImageMaker/images/Arrow_Right.png'); ">
+                        <input type="button" @click="cropper.move(0, -2)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehSummonImageMaker/images/Arrow_Up.png'); ">
+                        <input type="button" @click="cropper.move(0, 2)" class="arrowButton"
+                            style="background-image: url('/FehTools/FehSummonImageMaker/images/Arrow_Down.png'); ">
+
+                    </td>
+                </tr>
+                <tr v-if="false">
+                    <td>画像ズーム: </td>
+                    <td>
+                        <input type="button" value="＋" @click="cropper.zoom(0.1)">
+                        <input type="button" value="－" @click="cropper.zoom(-0.1)">
+
+                    </td>
+                </tr>
+            </table>
+            <div style="text-align:center;padding: 10px; ">
+                <img id="resultImg">
+            </div>
+            <p v-if="false">
+                <label><input type="checkbox" v-model="mozImageSmoothingEnabled"
+                        @change="inputChanged">mozImageSmoothingEnabled</label>
+                <label><input type="checkbox" v-model="webkitImageSmoothingEnabled"
+                        @change="inputChanged">webkitImageSmoothingEnabled</label>
+                <label><input type="checkbox" v-model="msImageSmoothingEnabled"
+                        @change="inputChanged">msImageSmoothingEnabled</label>
+                <label><input type="checkbox" v-model="imageSmoothingEnabled"
+                        @change="inputChanged">imageSmoothingEnabled</label>
+            </p>
+        </fieldset>
+
+        <fieldset>
+            <legend>レアリティ</legend>
+            <label v-for="(item) in Rarity">
+                <input type="radio" name="rarity" v-bind:value="item" v-model="rarity" @change="inputChanged" />
+                {{rarityToString(item)}}
+            </label>
+        </fieldset>
+        <fieldset>
+            <legend>テキスト</legend>
+            <p>
+                <input type="button" @click="heroMessage='';heroName='';heroEpithet='';updateIcon();"
+                    value="すべてのテキストをクリア">
+            </p>
+            <p>
+                称号:<br />
+                <input type="text" v-model="heroEpithet" style="width: 100%;" @input="inputChanged" id="heroEpithet">
+            </p>
+            <p>
+                名前:<br />
+                <input type="text" v-model="heroName" style="width: 100%;" @input="inputChanged" id="heroName">
+            </p>
+            <p>
+                セリフ:<br />
+                <textarea id="heroMessage" name="heroMessage" v-model="heroMessage" style="width:100%; " rows="3"
+                    @input="inputChanged" placeholder="セリフを入力してください。"></textarea>
+            </p>
+            <p>
+                フォント:
+                <label v-for="item in FontKind">
+                    <input type="radio" name="fontKind" v-bind:value="item.value" v-model="fontKind"
+                        @change="inputChanged" />
+                    {{item.label}}
+                </label>
+            </p>
+            <p>
+                ※フォントはFEHゲーム内のものと異なります。ご了承下さい。
+            </p>
+        </fieldset>
+
+        <fieldset v-if="false">
+            <legend>デバッグ</legend>
+            文字: <input type="text" v-model="fontTestText">
+            <table border="1" style="border-style: solid;">
+                <tr>
+                    <th>フォント名</th>
+                    <th>プレビュー</th>
+                </tr>
+                <tr v-for="font of JpFonts">
+                    <td>{{font.label}}({{font.value}})</td>
+                    <td><span v-bind:style="'font-family:'+font.value">{{fontTestText}}</span></td>
+                </tr>
+            </table>
+        </fieldset>
+        <div style="display: none;">
+            <canvas id="croppedCanvas" width="1" height="1"></canvas>
+            <canvas id="resultCanvas" width="1" height="1"></canvas>
+            <img v-for="item in Rarity" v-bind:src="imageRoot + '/Star'+item+'.png?20201018'" v-bind:id="'Star'+item">
+            <img id="SummonBackground" v-bind:src="imageRoot + '/Summon_Background.png'">
+            <img id="Summon_Message" v-bind:src="imageRoot + '/Summon_Message.png'">
+            <img id="Summon_MessageOpa" v-bind:src="imageRoot + '/Summon_MessageOpa.png'">
+            <img id="Summon_Name" v-bind:src="imageRoot + '/Summon_Name.png'">
+            <img id="RadialLight" v-bind:src="imageRoot + '/RadialLight.png'">
+        </div>
+    </div>
+    <script>
+        let rootPath = "/";
+        // rootPath = "./../";
+        const imageRoot = rootPath + "FehTools/FehSummonImageMaker/images";
+
+        const JpFonts = [
+            { label: "MS UIゴシック", value: "MS UI Gothic" },
+            { label: "MS Pゴシック", value: "MS PGothic" },
+            { label: "MS ゴシック", value: "MS Gothic" },
+            { label: "MS P明朝", value: "MS PMincho" },
+            { label: "MS明朝", value: "MS Mincho" },
+            { label: "メイリオ", value: "Meiryo" },
+            { label: "メイリオUI", value: "Meiryo UI" },
+            { label: "游ゴシック", value: "Yu Gothic" },
+            { label: "游明朝", value: "Yu Mincho" },
+            { label: "UDデジタル教科書体N-R", value: "UD Digi Kyokasho N-R" },
+            { label: "UDデジタル教科書体N-B", value: "UD Digi Kyokasho N-B" },
+            { label: "UDデジタル教科書体NK-R", value: "UD Digi Kyokasho NK-R" },
+            { label: "UDデジタル教科書体NK-B", value: "UD Digi Kyokasho NK-B" },
+            { label: "UDデジタル教科書体NP-R", value: "UD Digi Kyokasho NP-R" },
+            { label: "UDデジタル教科書体NP-B", value: "UD Digi Kyokasho NP-B" },
+            { label: "BIZ UDゴシック", value: "BIZ UDGothic" },
+            { label: "BIZ UDPゴシック", value: "BIZ UDPGothic" },
+            { label: "BIZ UD明朝", value: "BIZ UDMincho" },
+            { label: "BIZ UDP明朝", value: "UBIZ UDPMincho" },
+            // { label: "GenEiLateGoN", value: "WebSubset_GenEiLateGoN" },
+            // { label: "GenEiLateGoP", value: "WebSubset_GenEiLateGoP" },
+            { label: "GenEiLateMinN", value: "WebSubset_GenEiLateMinN" },
+            // { label: "GenEiLateMinP", value: "WebSubset_GenEiLateMinP" },
+        ];
+        const FontKind = [
+            { label: "源暎ラテミン", value: "WebSubset_GenEiLateMinN" },
+            { label: "システム明朝", value: "serif" },
+            { label: "システムゴシック", value: "sans-serif" },
+            // { label: "源暎ラテゴ", value: "WebSubset_GenEiLateGoN" },
+            // { label: "源暎ラテゴP", value: "WebSubset_GenEiLateGoP" },
+            // { label: "源暎ラテミンP", value: "WebSubset_GenEiLateMinP" },
+        ];
+        const Rarity = {
+            Star1: 1,
+            Star2: 2,
+            Star3: 3,
+            Star4: 4,
+            Star5: 5,
+            Star6: 6,
+            Star7: 7,
+        };
+
+        function rarityToString(value) {
+            switch (value) {
+                case Rarity.Star1: return "☆1";
+                case Rarity.Star2: return "☆2";
+                case Rarity.Star3: return "☆3";
+                case Rarity.Star4: return "☆4";
+                case Rarity.Star5: return "☆5";
+                case Rarity.Star6: return "☆5伝承/神階";
+                case Rarity.Star7: return "☆5偶像";
+            }
+        }
+        function getActualRarity(rarity) {
+            switch (rarity) {
+                case Rarity.Star6: return Rarity.Star5;
+            }
+            return rarity;
+        }
+
+        function getKeyByValue(object, value) {
+            return Object.keys(object).find(key => object[key] === value);
+        }
+
+        class AppData {
+            constructor() {
+                this.fontKind = "WebSubset_GenEiLateMinN";
+                this.imageOffsetX = 0;
+                this.imageOffsetY = 0;
+                this.heroEpithet = "闇に堕ちた";
+                this.heroName = "ベレト";
+                this.heroMessage = "...ベレトだ。\nたとえこの身が紋章の力に飲まれようとも、\n生徒達には指一本触れさせない。";
+                this.heroMessage = "天井まで★5なしだと...\nおのれフェーめ！！";
+                this.isRadialLightEnabled = false;
+                this.fontTestText = "あア亜"
+                this.currentCropPosX = 0;
+                this.currentCropPosY = 0;
+                this.currentCropWidth = 1;
+                this.currentCropHeight = 1;
+                this.message = "ツールを初期化しています。しばらくお待ちください..";
+                this.rarity = Rarity.Star6;
+                this.usesOpaqueMessage = false;
+
+                this.mozImageSmoothingEnabled = true;
+                this.webkitImageSmoothingEnabled = true;
+                this.msImageSmoothingEnabled = true;
+                this.imageSmoothingEnabled = true;
+            }
+        }
+        let appData = new AppData();
+        let vm = new Vue({
+            el: "#app",
+            data: appData,
+            methods: {
+                inputChanged: function () {
+                    updateIcon();
+                },
+            },
+        });
+        function updateIcon() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            if (croppedCanvas.width == 1) {
+                return;
+            }
+
+            const resultCanvas = document.getElementById("resultCanvas");
+            let ctx = resultCanvas.getContext("2d");
+            ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+            updateIconForGame();
+
+            let uri = resultCanvas.toDataURL();
+            let resultImg = document.getElementById("resultImg");
+            resultImg.src = uri;
+        }
+
+        function updateIconForGame() {
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            const bgImg = document.getElementById("SummonBackground");
+            const resultCanvas = document.getElementById("resultCanvas");
+            resultCanvas.width = 400;
+            resultCanvas.height = resultCanvas.width * 533 / 300;
+            let resizeRate = resultCanvas.width / bgImg.width;
+
+            let ctx = resultCanvas.getContext("2d");
+            ctx.mozImageSmoothingEnabled = appData.mozImageSmoothingEnabled;
+            ctx.webkitImageSmoothingEnabled = appData.webkitImageSmoothingEnabled;
+            ctx.msImageSmoothingEnabled = appData.msImageSmoothingEnabled;
+            ctx.imageSmoothingEnabled = appData.imageSmoothingEnabled;
+
+            {
+                const img = document.getElementById("SummonBackground");
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    0, 0, resultCanvas.width, resultCanvas.height);
+            }
+
+            if (appData.rarity === Rarity.Star6) {
+                const img = document.getElementById("RadialLight");
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    0, 0, resultCanvas.width, resultCanvas.height);
+            }
+            {
+                const img = croppedCanvas;
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    0, 0, resultCanvas.width, resultCanvas.height);
+            }
+
+
+            {
+                let id = "Summon_Message";
+                if (appData.usesOpaqueMessage) {
+                    id = "Summon_MessageOpa";
+                }
+                const img = document.getElementById(id);
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    0, 0, resultCanvas.width, resultCanvas.height);
+            }
+            {
+                const img = document.getElementById("Summon_Name");
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    0, 0, resultCanvas.width, resultCanvas.height);
+            }
+            {
+                let id = getKeyByValue(Rarity, getActualRarity(appData.rarity));
+                const img = document.getElementById(id);
+                if (img == null) {
+                    throw new Error(`img with id "${id}" was not found.`);
+                }
+                ctx.drawImage(img,
+                    0, 0, img.width, img.height,
+                    resultCanvas.width * 0.5 - img.width * resizeRate * 0.5,
+                    resultCanvas.height * 0.53,
+                    img.width * resizeRate, img.height * resizeRate);
+            }
+
+            const fontMultiply = 4.0 / 3.0;
+            const epithetFontSize = 13 * fontMultiply;
+            let nameFontSize = 16 * fontMultiply;
+            // if (appData.fontKind == "sans-serif") {
+            //     nameFontSize = 18 * fontMultiply;
+            // }
+            const messageFontSize = 13 * fontMultiply;
+            const fontFamily = appData.fontKind;
+            // console.log(fontFamily);
+            const lineHeight = 1.8;
+            ctx.fillStyle = "#ffffffbb";
+            ctx.strokeStyle = "#000000aa";
+            ctx.lineWidth = 3 * fontMultiply;
+            ctx.textAlign = "center";
+
+            drawTextOnCanvasByRatio(resultCanvas, appData.heroEpithet, 0.5, 0.62, epithetFontSize, fontFamily);
+            drawTextOnCanvasByRatio(resultCanvas, appData.heroName, 0.5, 0.688, nameFontSize, fontFamily);
+            ctx.textAlign = "left";
+            drawTextOnCanvasByRatio(resultCanvas, appData.heroMessage,
+                0.05, 0.79, messageFontSize, fontFamily, lineHeight);
+        }
+
+        let cropper = null;
+        const cropAspectRatio = 300 / 533;
+        const scaledWidth = 400;
+        const cropImage = function (evt) {
+            const files = evt.target.files;
+            if (files.length == 0) {
+                return;
+            }
+            let file = files[0];
+
+            reader.readAsDataURL(file);
+        }
+
+        let image = document.getElementById("sourceCanvas");
+        let g_croperEvent = null;
+        let reader = new FileReader();
+        reader.onload = function (evt) {
+            image.src = evt.target.result;
+        }
+
+        function redrawCroppedCanvas(event) {
+            // let scale = scaledWidth / image.width;
+            let scale = 1;
+            const croppedCanvas = document.getElementById("croppedCanvas");
+            {
+                let ctx = croppedCanvas.getContext("2d");
+
+                croppedCanvas.width = Math.trunc(event.detail.width + 0.5);
+                croppedCanvas.height = Math.trunc(event.detail.height + 0.5);
+
+                ctx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height);
+                ctx.mozImageSmoothingEnabled = appData.mozImageSmoothingEnabled;
+                ctx.webkitImageSmoothingEnabled = appData.webkitImageSmoothingEnabled;
+                ctx.msImageSmoothingEnabled = appData.msImageSmoothingEnabled;
+                ctx.imageSmoothingEnabled = appData.imageSmoothingEnabled;
+
+                ctx.drawImage(image,
+                    event.detail.x / scale, event.detail.y / scale, event.detail.width / scale, event.detail.height / scale,
+                    0, 0, croppedCanvas.width, croppedCanvas.height
+                );
+
+                appData.currentCropPosX = Math.trunc(event.detail.x + 0.5);
+                appData.currentCropPosY = Math.trunc(event.detail.y + 0.5);
+                appData.currentCropWidth = Math.trunc(event.detail.width + 0.5);
+                appData.currentCropHeight = Math.trunc(event.detail.height + 0.5);
+            }
+        }
+
+        function setCropperDataForAllArea() {
+            const canvas = document.getElementById("sourceCanvas");
+            cropper.zoomTo(1.0);
+            cropper.moveTo(0, 0);
+            cropper.setData({
+                x: 0,
+                y: 0,
+                width: canvas.width,
+                height: canvas.height,
+            });
+        }
+
+        image.onload = function () {
+            // let scale = scaledWidth / image.width;
+            let scale = 1;
+            let imageData = null;
+            {
+                const canvas = document.getElementById("sourceCanvas");
+                if (cropper != null) {
+                    // 画像を再読み込みした場合は破棄が必要
+                    cropper.destroy();
+                }
+
+                const settingSample1 = {
+                    x: 70,
+                    y: 30,
+                    width: 50,
+                    height: 50,
+                };
+                const settingSample2 = {
+                    x: 105,
+                    y: 0,
+                    width: 100,
+                    height: 100,
+                };
+                const settingSample3 = {
+                    x: -1,
+                    y: -77,
+                    width: 493,
+                    height: 876,
+                };
+
+                cropper = new Cropper(canvas, {
+                    aspectRatio: cropAspectRatio,
+                    movable: true,
+                    scalable: false,
+                    zoomable: false,
+                    autoCrop: true,
+                    data: settingSample3,
+                    crop: function (event) {
+                        g_croperEvent = event;
+                        redrawCroppedCanvas(event);
+                        updateIcon();
+                        cropper.setDragMode('move');
+                    }
+                });
+            }
+        }
+
+        let sampleImagePath = imageRoot + "/sample2.png";
+        sampleImagePath = imageRoot + "/Byleth.png";
+        // sampleImagePath = imageRoot + "/20200501181049.jpg";
+        // sampleImagePath = rootPath + "blog/images/feh/FallenByleth.png";
+
+        window.onload = function () {
+            const uploader = document.getElementById('uploader');
+            uploader.addEventListener('change', cropImage);
+            appData.message = "";
+            updateIcon();
+        }
+    </script>
+</body>
+
+</html>
