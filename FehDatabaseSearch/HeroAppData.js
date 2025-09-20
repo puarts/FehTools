@@ -180,9 +180,41 @@ class AppData extends AppDataBase {
         {
             const iconRoot = g_imageRoot + "FehHeroThumbs/";
             let query = `update heroes set rating_5=case resplendent when 'true' then hp_5+atk_5+spd_5+def_5+res_5+10 else hp_5+atk_5+spd_5+def_5+res_5 end;`;
-            query += `update heroes set max_dragonflower=(case when release_date>"2024-08-15" then 5 when release_date>"2023-08-15" then 10 when release_date>"2022-08-16" then 15 when release_date>"2021-08-16" then 20 when release_date>"2020-08-17" then 25 else (case when move_type="重装" or move_type="騎馬" or move_type="飛行" or release_date>="2019-02-20" then 30 else 35 end) end);`;
+
+            // 神竜の花の加算値
+            {
+                let dfQuery = 'update heroes set max_dragonflower=(case';
+
+                const baseYear = 2025;
+
+                const baseMonthDay = '08-14';
+                const baseValue = 5;
+                const untilYear = 2020;
+
+                let i = 0;
+                let currentYear = baseYear;
+                for (; currentYear >= untilYear; --currentYear, ++i) {
+                    const date = `${currentYear}-${baseMonthDay}`;
+                    const value = baseValue + i * 5;
+                    dfQuery += ` when release_date > "${date}" then ${value}`;
+                }
+
+                {
+                    const value1 = baseValue + i * 5;
+                    ++i;
+                    const value2 = baseValue + i * 5;
+                    dfQuery += ` else (case when move_type in ("重装", "騎馬", "飛行") or release_date >= "2019-02-20" then ${value1} else ${value2} end) end);`;
+                }
+
+                console.log(dfQuery);
+
+                query += dfQuery;
+            }
+
+
+            // query += `update heroes set max_dragonflower=(case when release_date>"2024-08-15" then 5 when release_date>"2023-08-15" then 10 when release_date>"2022-08-16" then 15 when release_date>"2021-08-16" then 20 when release_date>"2020-08-17" then 25 else (case when move_type="重装" or move_type="騎馬" or move_type="飛行" or release_date>="2019-02-20" then 30 else 35 end) end);`;
             query += `update heroes set rarity3=case when rarity3="星5" then (case when (release_date<"2022-03-01" and how_to_get="ガチャ") or (release_date<"2021-02-01" and how_to_get="超英雄") then "星4特別チャンス" else "星5限定" end) else rarity3 end;`;
-            query += `update heroes set how_to_get="期間限定ガチャ" where (how_to_get="ガチャ" and (special_type like "%比翼%" or special_type like "%双界%")) or how_to_get="魔器英雄" or how_to_get="響心英雄" or how_to_get="お供英雄";`;
+            query += `update heroes set how_to_get="期間限定ガチャ" where (how_to_get="ガチャ" and (special_type like "%比翼%" or special_type like "%双界%")) or how_to_get="魔器英雄" or how_to_get="響心英雄" or how_to_get="お供英雄" or how_to_get="つながり";`;
             query += `update heroes set how_to_get="恒常ガチャ" where how_to_get="ガチャ";`;
             query += `update heroes set how_to_get="超英雄ガチャ" where how_to_get="超英雄";`;
             query += `update heroes set how_to_get="紋章士英雄ガチャ" where how_to_get="紋章士英雄";`;
@@ -472,6 +504,7 @@ class AppData extends AppDataBase {
                     "響心",
                     "お供",
                     "紋章士",
+                    "つながり",
                 ]),
                 this.__createSearchTextInfoCategory("踊り子(再行動補助持ち)", this.__getColumnName(ColumnType.dancer), [
                     "yes",
