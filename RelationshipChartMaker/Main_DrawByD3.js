@@ -775,7 +775,7 @@ function updateGraphByD3js(
         .attr("height", g_nodeSize)
         .attr("width", g_nodeSize)
         // 画像ファイルが見つからないときにデフォルト画像にする
-        .attr("onerror", d => `this.onerror = null; g_appData.findNode('${d.id}').imagePath='${g_dummyImagePath}';`)
+        .attr("onerror", d => `g_appData.findNode('${d.id}').imagePath='${g_dummyImagePath}';`)
         .attr("class", "selectableIcon")
         .attr("clip-path", d => `url(#circle-clip${d.id})`)
         .call(dragNodeCalls);

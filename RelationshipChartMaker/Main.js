@@ -710,9 +710,10 @@ class AppData extends SqliteDatabase {
      */
     setEdgesDefinedByName(edges) {
         let charNameToCharDict = {};
-        for (let id of Object.keys(this.characters)) {
+        const ids = Object.keys(this.characters);
+        for (let id of ids) {
             let char = this.characters[id];
-            charNameToCharDict[char.name] = char.id;
+            charNameToCharDict[char.pureName] = char.id;
         }
         for (let edge of edges) {
             if (edge.source in charNameToCharDict) {

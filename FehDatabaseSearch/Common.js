@@ -14,10 +14,11 @@ function drawElementToCanvas(sourceElem, canvas) {
     // レンダリング時に上下左右に隙間が入ってしまうので、その分をcanvasサイズに加味
     const paddingW = 10;
     const paddingH = 15;
-    const style = getComputedStyle(sourceElem);
 
-    canvas.width = Number(style.width.replace("px", "")) + paddingW * 2;
-    canvas.height = Number(style.height.replace("px", "")) + paddingH * 2;
+    const rect = sourceElem.getBoundingClientRect();
+    canvas.width = rect.width + paddingW * 2;
+    canvas.height = rect.height + paddingH * 2;
+
     console.log(serialized);
 
     return rasterizeHTML.drawHTML(serialized, canvas);

@@ -48,6 +48,7 @@ function getEnglishTitle(jpTitle) {
         case "アカネイア戦記": return "";
         case "0（サイファ）": return "cipher";
         case "エンゲージ": return "Engage";
+        case "シャドウズ": return "Shadows";
         default: throw new Error("Unkonw title " + jpTitle);
     }
 }
