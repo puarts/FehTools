@@ -530,6 +530,8 @@ function calcMaxSp(
     treatsSacredSeal240 = false,
     treatsPassiveB300 = false
 ) {
+    if (weaponType == null) return 0;
+
     let weaponSp = 350;
     let supportSp = isDancer ? 150 : 400;
     let specialSp = 500;

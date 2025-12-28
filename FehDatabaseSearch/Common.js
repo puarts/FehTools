@@ -2,6 +2,12 @@
 const g_isLazyLoadImageEnabled = false;
 const g_dbRoot = "/db/";
 
+function stripHTML(htmlString) {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = htmlString;
+    return tempDiv.innerText;
+}
+
 function drawElementToCanvas(sourceElem, canvas) {
     let serialized = new XMLSerializer().serializeToString(sourceElem);
 
@@ -269,7 +275,9 @@ class AppDataBase {
 
         this.isRemoveConditionButtonDisabled = true;
         this.isAutoSearchEnabled = true;
-        this.sortColumn = ColumnTypeAll;
+        this.sortColumn = "";
+
+        this.defaultSortCondition = "";
 
         this.columnInfos = [
             new ColumnInfo(ColumnTypeAll, "全て", false, false)
@@ -588,7 +596,7 @@ class AppDataBase {
                 const column = columns[j];
                 const td = document.createElement("td");
                 tr.appendChild(td);
-                td.innerHTML = this.convertCellFunc != null ? this.convertCellFunc(cell, column) : cell;
+                td.innerHTML = this.convertCellFunc != null ? this.convertCellFunc(cell, column, record) : cell;
             }
         }
 
@@ -599,7 +607,7 @@ class AppDataBase {
 
     __createTableHeaderToButton(columnName, th, table) {
         let label = this.__parseColumnNameToLabel(columnName);
-        th.textContent = label;
+        th.innerHTML = label;
         th.addEventListener("mouseout", () => {
             th.style.background = '';
         });
@@ -765,6 +773,9 @@ class AppDataBase {
                 query = query + ` order by ${sortColumnInfo.name} ${this.sortOrder}`;
             }
         }
+        else if (this.defaultSortCondition != "") {
+            query = query + ` order by ${this.defaultSortCondition}`;
+        }
 
         return this.__createQueryPostProcess(query);
     }
@@ -775,6 +786,7 @@ class AppDataBase {
     }
 
     __getSortColumnInfo() {
+        if (this.sortColumn == ColumnTypeAll) return null;
         return this.columnInfos.find(x => x.name == this.sortColumn);
     }
 

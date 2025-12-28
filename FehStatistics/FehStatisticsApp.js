@@ -356,7 +356,8 @@ class AppData extends SqliteDatabase {
             const item = new ChartDataSet(displayDateString.substring(0, displayDateString.length - 3).replace("-", "/"));
             for (const name of columnNames) {
                 const cond = getConditionFunc(name);
-                const query = `select count(*) as count from heroes where (${cond}) and how_to_get!="" and how_to_get is not null and '${beginDate}'<= release_date and release_date<='${dateString}'`;
+                const query = `select count(*) as count from heroes where (${cond}) and how_to_get!="" and how_to_get is not null and '${beginDate}'<= release_date and release_date<'${dateString}'`;
+                console.log(query);
                 const queryResult = this.heroDb.exec(query)[0];
                 const row = queryResult.values[0];
                 const heroCount = row[0];

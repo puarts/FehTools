@@ -214,7 +214,7 @@ class AppData extends AppDataBase {
 
             // query += `update heroes set max_dragonflower=(case when release_date>"2024-08-15" then 5 when release_date>"2023-08-15" then 10 when release_date>"2022-08-16" then 15 when release_date>"2021-08-16" then 20 when release_date>"2020-08-17" then 25 else (case when move_type="重装" or move_type="騎馬" or move_type="飛行" or release_date>="2019-02-20" then 30 else 35 end) end);`;
             query += `update heroes set rarity3=case when rarity3="星5" then (case when (release_date<"2022-03-01" and how_to_get="ガチャ") or (release_date<"2021-02-01" and how_to_get="超英雄") then "星4特別チャンス" else "星5限定" end) else rarity3 end;`;
-            query += `update heroes set how_to_get="期間限定ガチャ" where (how_to_get="ガチャ" and (special_type like "%比翼%" or special_type like "%双界%")) or how_to_get="魔器英雄" or how_to_get="響心英雄" or how_to_get="お供英雄" or how_to_get="つながり";`;
+            query += `update heroes set how_to_get="期間限定ガチャ" where (how_to_get="ガチャ" and (special_type like "%比翼%" or special_type like "%双界%")) or how_to_get="魔器英雄" or how_to_get="響心英雄" or how_to_get="お供英雄" or how_to_get="つながり英雄";`;
             query += `update heroes set how_to_get="恒常ガチャ" where how_to_get="ガチャ";`;
             query += `update heroes set how_to_get="超英雄ガチャ" where how_to_get="超英雄";`;
             query += `update heroes set how_to_get="紋章士英雄ガチャ" where how_to_get="紋章士英雄";`;
@@ -261,7 +261,7 @@ class AppData extends AppDataBase {
             query += `update heroes set special_type=case resplendent when "true" then special_type||"|神装|" else special_type end;`;
             query += `update heroes set official_url${HtmlColumnSuffix}=case when official_url is null or official_url="" then "なし" else "<a href=\'"||official_url||"\' title=\'"||name||"の英雄紹介\'>英雄紹介</a>" end;`;
             query += `update heroes set official_url=case when official_url is null or official_url="" then "なし" else official_url end;`;
-            query += `update heroes set book=case when release_date<'2017-11-28' then 1 when release_date<'2018-12-11' then 2 when release_date<'2019-12-05' then 3 when release_date<'2020-12-08' then 4 when release_date<'2021-12-06' then 5 when release_date<'2022-12-01' then 6 when release_date<'2023-12-01' then 7 when release_date<'2024-12-01' then 8 when release_date<'2025-12-01' then 9 when release_date<'2026-12-01' then 10 else -1 end;`;
+            query += `update heroes set book=case when release_date<'2017-11-28' then 1 when release_date<'2018-12-11' then 2 when release_date<'2019-12-05' then 3 when release_date<'2020-12-08' then 4 when release_date<'2021-12-06' then 5 when release_date<'2022-12-01' then 6 when release_date<'2023-12-01' then 7 when release_date<'2024-12-01' then 8 when release_date<'2025-12-01' then 9 when release_date<'2026-12-01' then 10 when release_date<'2027-12-01' then 11 else -1 end;`;
             query += `create table heroes_tmp as select *,(case when part is null or part='' then 'なし' else '紙片'||devine_code||'<br>('||part||' '||replace(origins,'|',' ')||')' end) as combat_manual from heroes left outer join combat_manual on heroes.id=combat_manual.hero_id;`;
             query += `drop table heroes;`;
             query += `create table heroes as select * from heroes_tmp;`;
@@ -438,10 +438,10 @@ class AppData extends AppDataBase {
                 this.__createSearchTextInfoCategory("属性", this.__getColumnName(ColumnType.type), [
                     "赤", "青", "緑", "無",
                 ], [
-                    this.__getCheckboxImgTag('https://fire-emblem.fun/images/feh/ColorRed.png'),
-                    this.__getCheckboxImgTag('https://fire-emblem.fun/images/feh/ColorBlue.png'),
-                    this.__getCheckboxImgTag('https://fire-emblem.fun/images/feh/ColorGreen.png'),
-                    this.__getCheckboxImgTag('https://fire-emblem.fun/images/feh/ColorColorless.png'),
+                    this.__getCheckboxImgTag('/images/feh/ColorRed.png'),
+                    this.__getCheckboxImgTag('/images/feh/ColorBlue.png'),
+                    this.__getCheckboxImgTag('/images/feh/ColorGreen.png'),
+                    this.__getCheckboxImgTag('/images/feh/ColorColorless.png'),
                 ]),
                 this.__createSearchTextInfoCategory("武器種", this.__getColumnName(ColumnType.weapon_type), [
                     "剣",
@@ -482,6 +482,7 @@ class AppData extends AppDataBase {
                     "伝承",
                     "神階",
                     "紋章士",
+                    "救世",
                     "期間限定",
                     "戦渦の連戦",
                     "大英雄戦",
@@ -505,6 +506,7 @@ class AppData extends AppDataBase {
                     "お供",
                     "紋章士",
                     "つながり",
+                    "救世",
                 ]),
                 this.__createSearchTextInfoCategory("踊り子(再行動補助持ち)", this.__getColumnName(ColumnType.dancer), [
                     "yes",

@@ -103,7 +103,7 @@ class AppData extends AppDataBase {
 
         // ビューへの変換関数
         {
-            this.convertCellFunc = (value, columnName) => {
+            this.convertCellFunc = (value, columnName, record) => {
                 if (columnName == "date") {
                     const dayOfWeek = getDayOfWeek(value);
                     return `${value} (${dayOfWeek})`;

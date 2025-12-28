@@ -80,7 +80,7 @@ class AppData extends AppDataBase {
 
         // ビューへの変換関数
         {
-            this.convertCellFunc = (value, columnName) => {
+            this.convertCellFunc = (value, columnName, record) => {
                 if (columnName == "title") {
                     return `<div style='text-align:center;padding:5px;min-width:50px'>${value}</div>`;
                 }
