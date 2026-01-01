@@ -24,8 +24,8 @@
   <script src="/FehTools/RelationshipChartMaker/Utilities.js"></script>
   <script src="/FehTools/RelationshipChartMaker/CharacterInfo.js"></script>
   <script src="/FehTools/FehDatabaseSearch/Common.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesMagicAppData.js?20251005_2"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20260101"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesMagicAppData.js?20260101_3"></script>
   <style>
     .buttonDefault {
       width: 100;
@@ -123,6 +123,15 @@
           <label>
             <input type="radio" :value="level" v-model="currentLevel" @change="conditionChanged" />
             {{ level }}
+          </label>
+        </span>
+      </fieldset>
+      <fieldset style="background-color: white;padding:0">
+        <legend>相性(効果説明のダメージに影響)</legend>
+        <span style="display: inline-block;margin:3px;" v-for="value in ['なし', '有利', '不利']" :key="value">
+          <label>
+            <input type="radio" :value="value" v-model="advantage" @change="conditionChanged" />
+            {{ value }}
           </label>
         </span>
       </fieldset>

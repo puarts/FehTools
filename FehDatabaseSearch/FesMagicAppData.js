@@ -42,6 +42,7 @@ class AppData extends AppDataBase {
         this.magicNameToMagiInfo = {};
 
         this.currentLevel = 1;
+        this.advantage = 'なし';
 
         this.defaultSortCondition = "release_date desc,type='闇',type='光',type='専用',effect_type like '%攻撃%' desc,effect_type like '%回復%' desc,effect_type like '%化%' desc,effect_type like '%移動%' desc,effect_type like '%召喚%' desc,disciples='なし'";
     }
@@ -145,7 +146,7 @@ class AppData extends AppDataBase {
                     /** @type {MagicInfo} */
                     const info = this.magicNameToMagiInfo[value];
                     let html = "<div style='font-size:12px;text-align:center;min-width:50px;'>";
-                    html += `<a href='${info.url}'><img src='${info.iconUrl}' height='66'><br>${value}</a>`;
+                    html += `<a href='${info.url}'><img src='${info.iconUrl}' onerror="this.onerror=null; this.src='${info.altIconUrl}';" height='66'><br>${value}</a>`;
                     html += "</div>";
                     return html;
                 } else if (columnName == "description") {
@@ -203,30 +204,55 @@ class AppData extends AppDataBase {
                 this.__createSearchTextInfoCategory(
                     ColumnType.effect_type,
                     this.__getColumnName(ColumnType.effect_type),
-                    ["攻撃", "攻撃|移動", "回復", "回復|移動", "強化", "弱化", "移動", "召喚"],
+                    ["攻撃", "攻撃|移動", "攻撃|回復", "回復", "回復|移動", "強化", "弱化", "移動", "召喚"],
                     null,
                     true),
             ]);
         }
     }
 
+    __getAdvantageRate() {
+        switch (this.advantage) {
+            case '有利': return 0.2;
+            case '不利': return -0.2;
+            case 'なし':
+            default:
+                return 0;
+        }
+    }
+
     __updateMagicDescriptionByCurrentLevel(description, info) {
         let numbers = extractBracketedNumbers(description);
 
-        switch (info.effectTypes[0]) {
-            case "攻撃":
-            case "回復":
-                numbers = numbers.map(x => calcValueForSpecifiedLevel(x, this.currentLevel, 1.0));
-                break;
-            case "強化":
-            case "弱化":
-                numbers = numbers.map(x => calcValueForSpecifiedLevel(x, this.currentLevel, 0.5));
-                break;
-            case "召喚":
-                numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 1.0);
-                numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 2.0);
-                break;
+        const advRate = this.__getAdvantageRate();
+
+        if (info.name == "イーサーEX") {
+            numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 1.0);
+            numbers[0] = numbers[0] + Math.trunc(numbers[0] * advRate);
+            numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 2.0 / 3.0);
         }
+        else {
+            switch (info.effectTypes[0]) {
+                case "攻撃":
+                    numbers = numbers.map(x => {
+                        const baseVal = calcValueForSpecifiedLevel(x, this.currentLevel, 1.0);
+                        return baseVal + Math.trunc(baseVal * advRate);
+                    });
+                    break;
+                case "回復":
+                    numbers = numbers.map(x => calcValueForSpecifiedLevel(x, this.currentLevel, 1.0));
+                    break;
+                case "強化":
+                case "弱化":
+                    numbers = numbers.map(x => calcValueForSpecifiedLevel(x, this.currentLevel, 0.5));
+                    break;
+                case "召喚":
+                    numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 1.0);
+                    numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 2.0);
+                    break;
+            }
+        }
+
 
         const replaced = replaceBracketedNumbers(description, numbers);
         return replaced;

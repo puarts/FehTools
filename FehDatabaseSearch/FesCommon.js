@@ -20,6 +20,10 @@ class MagicInfo {
     get iconUrl() {
         return `/images/fe-shadows/icons/magics/${this.name}.png`;
     }
+
+    get altIconUrl() {
+        return `/images/fe-shadows/icons/magics/${this.name}.webp`;
+    }
 }
 
 function calcValueForSpecifiedLevel(initValue, currentLevel, incrementMultiply = 1) {
