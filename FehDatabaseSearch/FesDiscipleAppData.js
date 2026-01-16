@@ -166,9 +166,9 @@ class AppData extends AppDataBase {
                     result += `<img src="${charInfo.imagePath}" width="${thumbSize}" height="${thumbSize}"><br/>`;
 
                     const discipleInfo = this.nameToDiscipleInfo[value];
-                    const weaponIcon = this.__getWeaponIconPath(discipleInfo.weaponType);
+                    const weaponIcon = getWeaponIconPath(discipleInfo.weaponType);
                     result += `<img src="${weaponIcon}" style='position: absolute; top:0;left:0;width:15px;height:15px'>`;
-                    const classIcon = this.__getClassIconPath(discipleInfo.class);
+                    const classIcon = getClassIconPath(discipleInfo.class);
                     result += `<img src="${classIcon}" style='position: absolute; bottom:0;left:0;width:15px;height:15px'>`;
                     result += "</div>";
                     return result + `<div>${value}</div></div></a>`;
@@ -208,12 +208,12 @@ class AppData extends AppDataBase {
                 "杖",
                 "弓",
             ];
-            const weaponIcons = Array.from(weaponTypes.map(x => this.__getCheckboxImgTag(this.__getWeaponIconPath(x))));
+            const weaponIcons = Array.from(weaponTypes.map(x => this.__getCheckboxImgTag(getWeaponIconPath(x))));
 
             const classTypes = [
                 "攻撃", "耐久", "騎馬", "飛行",
             ];
-            const classIcons = Array.from(classTypes.map(x => this.__getCheckboxImgTag(this.__getClassIconPath(x))));
+            const classIcons = Array.from(classTypes.map(x => this.__getCheckboxImgTag(getClassIconPath(x))));
 
             const colorCategory = this.__createSearchTextInfoCategory("属性", this.__getColumnName(ColumnType.color), [
                 "赤", "青", "緑",
@@ -233,30 +233,6 @@ class AppData extends AppDataBase {
                 this.__createSearchTextInfoCategory("タイプ", this.__getColumnName(ColumnType.class), classTypes, classIcons, true),
                 this.__createSearchTextInfoCategoryByExistingValues(ColumnType.sex, false),
             ]);
-        }
-    }
-
-    __getClassIconPath(classType) {
-        switch (classType) {
-            case "攻撃": return '/images/fe-shadows/icons/type-infantry.png';
-            case "耐久": return '/images/fe-shadows/icons/type-armored.png';
-            case "騎馬": return '/images/fe-shadows/icons/type-cavalry.png';
-            case "飛行": return '/images/fe-shadows/icons/type-flying.png';
-            default: return '';
-        }
-    }
-
-    __getWeaponIconPath(weaponType) {
-        switch (weaponType) {
-            case "剣": return '/images/fe-shadows/icons/weapon-sword.png';
-            case "槍": return '/images/fe-shadows/icons/weapon-lance.png';
-            case "斧": return '/images/fe-shadows/icons/weapon-axe.png';
-            case "竜": return '/images/fe-shadows/icons/weapon-stone.png';
-            case "爪": return '/images/fe-shadows/icons/weapon-claws.png';
-            case "書": return '/images/fe-shadows/icons/weapon-tome.png';
-            case "杖": return '/images/fe-shadows/icons/weapon-staff.png';
-            case "弓": return '/images/fe-shadows/icons/weapon-bow.png';
-            default: return "";
         }
     }
 

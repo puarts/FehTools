@@ -1,4 +1,4 @@
-<meta charset="utf8" />
+﻿<meta charset="utf8" />
 <html>
 
 <head>
@@ -23,8 +23,8 @@
   <script src="/FehTools/RelationshipChartMaker/Utilities.js"></script>
   <script src="/FehTools/RelationshipChartMaker/CharacterInfo.js"></script>
   <script src="/FehTools/FehDatabaseSearch/Common.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesWeaponAppData.js?20251005_5"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20260103_3"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesWeaponAppData.js?20260103_4"></script>
   <style>
     .buttonDefault {
       width: 100;
@@ -98,24 +98,24 @@
       </b>
     </p>
     <details open class="detailsDefault detailSettingBox">
-      <summary class="detailSummary">条件による絞り込み</summary>
-      <fieldset v-for="category in searchTextInfoCategories" style="background-color: white;padding:0">
-        <legend>{{category.label}}</legend>
-        <span style="display: inline-block;margin:3px;" v-for="(searchTextInfo, index) in category.searchTextInfos">
-          <label>
-            <input v-bind:name="category.label" type="checkbox" v-model="searchTextInfo.isEnabled"
-              class="checkboxDefult" @change="conditionChanged" v-if="category.uiType == UiType.Checkbox">
-            <input v-bind:name="category.label" type="radio" v-model="category.selectedSearchTextInfoIndex"
-              class="checkboxDefult" v-bind:value="index" @change="conditionChanged"
-              v-else-if="category.uiType == UiType.Radio">
-            <span v-html="searchTextInfo.label"></span>
-          </label>
-        </span>
-        <div class="divDefault" v-if="category.isBulkControlEnabled">
-          <input type="button" value="全てオン" class="buttonDefault" @click="enableAllTextSearchInfoInCategory(category)">
-          <input type="button" value="全てオフ" class="buttonDefault" @click="disableAllTextSearchInfoInCategory(category)">
-        </div>
-      </fieldset>
+        <summary class="detailSummary">条件による絞り込み</summary>
+        <fieldset v-for="category in searchTextInfoCategories" style="background-color: white;padding:0">
+            <legend>{{category.label}}</legend>
+            <span style="display: inline-block;margin:3px;" v-for="(searchTextInfo, index) in category.searchTextInfos">
+                <label>
+                    <input v-bind:name="category.label" type="checkbox" v-model="searchTextInfo.isEnabled"
+                           class="checkboxDefult" @change="conditionChanged" v-if="category.uiType == UiType.Checkbox">
+                    <input v-bind:name="category.label" type="radio" v-model="category.selectedSearchTextInfoIndex"
+                           class="checkboxDefult" v-bind:value="index" @change="conditionChanged"
+                           v-else-if="category.uiType == UiType.Radio">
+                    <span v-html="searchTextInfo.label"></span>
+                </label>
+            </span>
+            <div class="divDefault" v-if="category.isBulkControlEnabled">
+                <input type="button" value="全てオン" class="buttonDefault" @click="enableAllTextSearchInfoInCategory(category)">
+                <input type="button" value="全てオフ" class="buttonDefault" @click="disableAllTextSearchInfoInCategory(category)">
+            </div>
+        </fieldset>
     </details>
     <details class="detailsDefault detailSettingBox">
       <summary class="detailSummary">文字列検索</summary>

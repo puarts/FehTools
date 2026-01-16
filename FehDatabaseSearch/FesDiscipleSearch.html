@@ -24,8 +24,8 @@
   <script src="/FehTools/RelationshipChartMaker/Utilities.js"></script>
   <script src="/FehTools/RelationshipChartMaker/CharacterInfo.js"></script>
   <script src="/FehTools/FehDatabaseSearch/Common.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20251005_2"></script>
-  <script src="/FehTools/FehDatabaseSearch/FesDiscipleAppData.js?20251005_4"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesCommon.js?20260103_3"></script>
+  <script src="/FehTools/FehDatabaseSearch/FesDiscipleAppData.js?20260103_3"></script>
   <style>
     .buttonDefault {
       width: 100;
@@ -131,16 +131,16 @@
       </fieldset>
       <fieldset style="background-color: white;padding:0">
         <legend>HP補正(HPの値に影響)</legend>
-        <span style="display: inline-block;margin:3px;" v-for="value in 11" :key="value">
+        <span style="display: inline-block;margin:3px;" v-for="value in [0,5,6,10,11,15,16,20,21]" :key="value">
           <label>
-            <input type="radio" :value="(value - 1) * 5 * 0.01" v-model="hpBonus" @change="conditionChanged" />
-            +{{ (value - 1) * 5 }}%
+            <input type="radio" :value="value * 0.01" v-model="hpBonus" @change="conditionChanged" />
+            +{{ value }}%
           </label>
         </span>
       </fieldset>
       <fieldset style="background-color: white;padding:0">
         <legend>攻撃補正(攻撃の値に影響)</legend>
-        <span style="display: inline-block;margin:3px;" v-for="value in 11" :key="value">
+        <span style="display: inline-block;margin:3px;" v-for="value in 21" :key="value">
           <label>
             <input type="radio" :value="(value - 1) * 5 * 0.01" v-model="atkBonus" @change="conditionChanged" />
             +{{ (value - 1) * 5 }}%

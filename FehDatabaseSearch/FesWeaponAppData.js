@@ -25,11 +25,9 @@ class AppData extends AppDataBase {
             column.isKeyColumn = true;
             let visibleColumns = [
                 ColumnType.name,
-                ColumnType.rarity,
                 ColumnType.hp,
                 ColumnType.atk,
                 ColumnType.slots,
-                ColumnType.exclusive,
             ];
             for (let columnType of visibleColumns) {
                 this.__findColumnInfoByType(columnType).isVisible = true;
@@ -40,14 +38,69 @@ class AppData extends AppDataBase {
         this.nameToDiscipleInfo = {};
         this.magicNameToMagiInfo = {};
 
-        this.currentLevel = 1;
-        this.hpBonus = 0;
-        this.atkBonus = 0;
+        this.defaultSortCondition = "rarity desc, type";
+    }
 
-        this.defaultSortCondition = "type desc";
+    __initDict() {
+        const discipleNames = [];
+        {
+            const queryResult = this.dbs[0].exec("select * from disciples")[0];
+            const rows = queryResult.values;
+            const nameIndex = queryResult.columns.indexOf("name");
+            const weaponIndex = queryResult.columns.indexOf("weapon_type");
+            const classIndex = queryResult.columns.indexOf("class");
+            for (const row of rows) {
+                const name = row[nameIndex];
+                const weaponType = row[weaponIndex];
+                const classType = row[classIndex];
+                discipleNames.push(name);
+                this.nameToDiscipleInfo[name] = new DiscipleInfo(name, weaponType, classType);
+            }
+        }
+
+        {
+            const namesText = discipleNames.join("\" or name=\"");
+            const condition = `(name="${namesText}") and series="|シャドウズ|" and variation="光"`;
+
+            /** @type {CharacterInfo[]} */
+            const charInfos = createCharacterInfoListFromDb(this.dbs[1], `where ${condition}`);
+            for (const charInfo of charInfos) {
+                this.nameToCharInfo[charInfo.pureName] = charInfo;
+            }
+        }
+
+        {
+            const queryResult = this.dbs[0].exec("select * from magics")[0];
+            const rows = queryResult.values;
+            const nameIndex = queryResult.columns.indexOf("name");
+            const idIndex = queryResult.columns.indexOf("id");
+            const effectTypeIndex = queryResult.columns.indexOf("effect_type");
+            for (const row of rows) {
+                const name = row[nameIndex];
+                const id = row[idIndex];
+                const effectType = row[effectTypeIndex];
+                this.magicNameToMagiInfo[name] = new MagicInfo(id, name, effectType);
+            }
+        }
     }
 
     __initDatabaseTable() {
+        this.__initDict();
+
+        {
+            const queryResult = this.dbs[0].exec("select * from disciples")[0];
+            const rows = queryResult.values;
+            const nameIndex = queryResult.columns.indexOf("name");
+            const weaponIndex = queryResult.columns.indexOf("weapon_type");
+            const classIndex = queryResult.columns.indexOf("class");
+            for (const row of rows) {
+                const name = row[nameIndex];
+                const weaponType = row[weaponIndex];
+                const classType = row[classIndex];
+                this.nameToDiscipleInfo[name] = new DiscipleInfo(name, weaponType, classType);
+            }
+        }
+
 
         // weapons_ex テーブルを weapons テーブルから作成
         {
@@ -153,8 +206,51 @@ class AppData extends AppDataBase {
 
                 if (insertQueries !== '') {
                     this.__execQuery(insertQueries);
+
+                    // Replace slots entries that match weapon_skills.name with weapon_skills.description
+                    const wsQueryResult = this.__execQuery("select name,description from weapon_skills");
+                    if (wsQueryResult != null && wsQueryResult.length > 0) {
+                        const wsResult0 = wsQueryResult[0];
+                        const wsKeyToIndex = {};
+                        for (let i = 0; i < wsResult0.columns.length; ++i) {
+                            wsKeyToIndex[wsResult0.columns[i]] = i;
+                        }
+
+                        const nameToDesc = {};
+                        for (const wsRow of wsResult0.values) {
+                            const wsName = wsRow[wsKeyToIndex['name']];
+                            const wsDesc = wsRow[wsKeyToIndex['description']];
+                            nameToDesc[wsName] = wsDesc;
+                        }
+
+                        const weQuery = this.__execQuery("select name,slots from weapons_ex");
+                        if (weQuery != null && weQuery.length > 0) {
+                            const weResult0 = weQuery[0];
+                            const weKeyToIndex = {};
+                            for (let i = 0; i < weResult0.columns.length; ++i) {
+                                weKeyToIndex[weResult0.columns[i]] = i;
+                            }
+
+                            let updateQueries = '';
+                            for (const weRow of weResult0.values) {
+                                const weName = weRow[weKeyToIndex['name']];
+                                const slotsText = weRow[weKeyToIndex['slots']];
+                                const parts = convertTextToArray(slotsText);
+                                const newParts = parts.map(p => (p in nameToDesc) ? nameToDesc[p] : p);
+                                const newSlots = '|' + newParts.join('|') + '|';
+                                const escapedSlots = String(newSlots).replace(/'/g, "''");
+                                const escapedName = String(weName).replace(/'/g, "''");
+                                updateQueries += `update weapons_ex set slots='${escapedSlots}' where name='${escapedName}';`;
+                            }
+
+                            if (updateQueries !== '') {
+                                this.__execQuery(updateQueries);
+                            }
+                        }
+                    }
                 }
             }
+
         }
 
 
@@ -176,44 +272,46 @@ class AppData extends AppDataBase {
                     result += '</ul>';
                     return result;
                 }
+                else if (columnName === this.__getColumnName(ColumnType.exclusive)) {
+                    // 名前の上にキャラアイコン表示
+                    if (!(value in this.nameToCharInfo)) {
+                        return value;
+                    }
+
+                    /** @type {CharacterInfo} */
+                    const charInfo = this.nameToCharInfo[value];
+                    const thumbSize = 50;
+                    let result = `<a href='${charInfo.url}'><div style='font-size:12px;text-align:center;min-width:72px;'>`;
+                    result += "<div style='position:relative;display:inline-block;'>";
+                    result += `<img src="${charInfo.imagePath}" width="${thumbSize}" height="${thumbSize}"><br/>`;
+
+                    const discipleInfo = this.nameToDiscipleInfo[value];
+                    const weaponIcon = getWeaponIconPath(discipleInfo.weaponType);
+                    result += `<img src="${weaponIcon}" style='position: absolute; top:0;left:0;width:15px;height:15px'>`;
+                    const classIcon = getClassIconPath(discipleInfo.class);
+                    result += `<img src="${classIcon}" style='position: absolute; bottom:0;left:0;width:15px;height:15px'>`;
+                    result += "</div>";
+                    return result + `<div>${value}</div></div></a>`;
+                }
                 return value;
             };
         }
 
 
         this.__addSearchTextInfoCategories([
-            this.__createSearchTextInfoCategoryByExistingValues(ColumnType.type, false),
-            this.__createSearchTextInfoCategoryByExistingValues(ColumnType.rarity, false),
+            this.__createSearchTextInfoCategoryByExistingValues(ColumnType.type, true),
+            this.__createSearchTextInfoCategoryByExistingValues(ColumnType.rarity, true),
+            this.__createSearchTextInfoCategory(
+                "補正",
+                this.__getColumnName(ColumnType.name),
+                ['攻撃', '中庸', 'HP'],
+                null,
+                true),
         ]);
 
     }
 
     updateTableHeader() {
-    }
-
-
-    __getClassIconPath(classType) {
-        switch (classType) {
-            case "攻撃": return '/images/fe-shadows/icons/type-infantry.png';
-            case "耐久": return '/images/fe-shadows/icons/type-armored.png';
-            case "騎馬": return '/images/fe-shadows/icons/type-cavalry.png';
-            case "飛行": return '/images/fe-shadows/icons/type-flying.png';
-            default: return '';
-        }
-    }
-
-    __getWeaponIconPath(weaponType) {
-        switch (weaponType) {
-            case "剣": return '/images/fe-shadows/icons/weapon-sword.png';
-            case "槍": return '/images/fe-shadows/icons/weapon-lance.png';
-            case "斧": return '/images/fe-shadows/icons/weapon-axe.png';
-            case "竜": return '/images/fe-shadows/icons/weapon-stone.png';
-            case "爪": return '/images/fe-shadows/icons/weapon-claws.png';
-            case "書": return '/images/fe-shadows/icons/weapon-tome.png';
-            case "杖": return '/images/fe-shadows/icons/weapon-staff.png';
-            case "弓": return '/images/fe-shadows/icons/weapon-bow.png';
-            default: return "";
-        }
     }
 
     __createSearchTextInfoCategoryByExistingValues(columnLabel, isBulkControlEnabled) {

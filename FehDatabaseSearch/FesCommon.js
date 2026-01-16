@@ -44,3 +44,27 @@ function replaceBracketedNumbers(text, replacements) {
         return typeof newValue !== 'undefined' ? `【${newValue}】` : '【?】';
     });
 }
+
+function getClassIconPath(classType) {
+    switch (classType) {
+        case "攻撃": return '/images/fe-shadows/icons/type-infantry.png';
+        case "耐久": return '/images/fe-shadows/icons/type-armored.png';
+        case "騎馬": return '/images/fe-shadows/icons/type-cavalry.png';
+        case "飛行": return '/images/fe-shadows/icons/type-flying.png';
+        default: return '';
+    }
+}
+
+function getWeaponIconPath(weaponType) {
+    switch (weaponType) {
+        case "剣": return '/images/fe-shadows/icons/weapon-sword.png';
+        case "槍": return '/images/fe-shadows/icons/weapon-lance.png';
+        case "斧": return '/images/fe-shadows/icons/weapon-axe.png';
+        case "竜": return '/images/fe-shadows/icons/weapon-stone.png';
+        case "爪": return '/images/fe-shadows/icons/weapon-claws.png';
+        case "書": return '/images/fe-shadows/icons/weapon-tome.png';
+        case "杖": return '/images/fe-shadows/icons/weapon-staff.png';
+        case "弓": return '/images/fe-shadows/icons/weapon-bow.png';
+        default: return "";
+    }
+}

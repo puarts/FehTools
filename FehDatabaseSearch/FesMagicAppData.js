@@ -50,7 +50,7 @@ class AppData extends AppDataBase {
     updateDescriptionHeader() {
         const columnName = this.__getColumnName(ColumnType.description);
         let info = this.columnInfos.find(x => x.displayColumnName == columnName);
-        info.label = `効果(LV${this.currentLevel})`;
+        info.label = `効果(LV${this.currentLevel} 相性${this.advantage})`;
     }
 
     __initDict() {
@@ -174,9 +174,9 @@ class AppData extends AppDataBase {
                         result += `<img src="${charInfo.imagePath}" width="${thumbSize}" height="${thumbSize}">`;
 
                         const discipleInfo = this.nameToDiscipleInfo[discipleName];
-                        const weaponIcon = this.__getWeaponIconPath(discipleInfo.weaponType);
+                        const weaponIcon = getWeaponIconPath(discipleInfo.weaponType);
                         result += `<img src="${weaponIcon}" style='position: absolute; top:0;left:0;width:15px;height:15px'>`;
-                        const classIcon = this.__getClassIconPath(discipleInfo.class);
+                        const classIcon = getClassIconPath(discipleInfo.class);
                         result += `<img src="${classIcon}" style='position: absolute; bottom:0;left:0;width:15px;height:15px'>`;
                         result += "</div>";
                         result += `<div>${discipleName}</div></a></div>`;
@@ -204,7 +204,18 @@ class AppData extends AppDataBase {
                 this.__createSearchTextInfoCategory(
                     ColumnType.effect_type,
                     this.__getColumnName(ColumnType.effect_type),
-                    ["攻撃", "攻撃|移動", "攻撃|回復", "回復", "回復|移動", "強化", "弱化", "移動", "召喚"],
+                    [
+                        "攻撃",
+                        "攻撃|移動",
+                        "攻撃|回復",
+                        "攻撃|障害物",
+                        "回復",
+                        "回復|移動",
+                        "強化",
+                        "強化|回復|移動",
+                        "弱化",
+                        "移動",
+                        "召喚"],
                     null,
                     true),
             ]);
@@ -221,7 +232,13 @@ class AppData extends AppDataBase {
         }
     }
 
+    __canLevelUp(info) {
+        return !info.name.startsWith("ミニ");
+    }
+
     __updateMagicDescriptionByCurrentLevel(description, info) {
+        if (!this.__canLevelUp(info)) return description;
+
         let numbers = extractBracketedNumbers(description);
 
         const advRate = this.__getAdvantageRate();
@@ -230,6 +247,10 @@ class AppData extends AppDataBase {
             numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 1.0);
             numbers[0] = numbers[0] + Math.trunc(numbers[0] * advRate);
             numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 2.0 / 3.0);
+        }
+        else if (info.name == "スタミナ・プル+(飛行専用)") {
+            numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 0.5);
+            numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 1.0);
         }
         else {
             switch (info.effectTypes[0]) {
@@ -256,30 +277,6 @@ class AppData extends AppDataBase {
 
         const replaced = replaceBracketedNumbers(description, numbers);
         return replaced;
-    }
-
-    __getClassIconPath(classType) {
-        switch (classType) {
-            case "攻撃": return '/images/fe-shadows/icons/type-infantry.png';
-            case "耐久": return '/images/fe-shadows/icons/type-armored.png';
-            case "騎馬": return '/images/fe-shadows/icons/type-cavalry.png';
-            case "飛行": return '/images/fe-shadows/icons/type-flying.png';
-            default: return '';
-        }
-    }
-
-    __getWeaponIconPath(weaponType) {
-        switch (weaponType) {
-            case "剣": return '/images/fe-shadows/icons/weapon-sword.png';
-            case "槍": return '/images/fe-shadows/icons/weapon-lance.png';
-            case "斧": return '/images/fe-shadows/icons/weapon-axe.png';
-            case "竜": return '/images/fe-shadows/icons/weapon-stone.png';
-            case "爪": return '/images/fe-shadows/icons/weapon-claws.png';
-            case "書": return '/images/fe-shadows/icons/weapon-tome.png';
-            case "杖": return '/images/fe-shadows/icons/weapon-staff.png';
-            case "弓": return '/images/fe-shadows/icons/weapon-bow.png';
-            default: return "";
-        }
     }
 
     __createSearchTextInfoCategoryByExistingValues(columnLabel, isBulkControlEnabled) {
