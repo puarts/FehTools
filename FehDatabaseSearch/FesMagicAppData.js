@@ -226,6 +226,8 @@ class AppData extends AppDataBase {
         switch (this.advantage) {
             case '有利': return 0.2;
             case '不利': return -0.2;
+            case '激化有利': return 0.4;
+            case '激化不利': return -0.4;
             case 'なし':
             default:
                 return 0;
@@ -251,6 +253,24 @@ class AppData extends AppDataBase {
         else if (info.name == "スタミナ・プル+(飛行専用)") {
             numbers[0] = calcValueForSpecifiedLevel(numbers[0], this.currentLevel, 0.5);
             numbers[1] = calcValueForSpecifiedLevel(numbers[1], this.currentLevel, 1.0);
+        }
+        else if (info.effectTypes.length == numbers.length) {
+            for (let i = 0; i < info.effectTypes.length; ++i) {
+                const effectType = info.effectTypes[i];
+                switch (effectType) {
+                    case "攻撃":
+                        const baseVal = calcValueForSpecifiedLevel(numbers[i], this.currentLevel, 1.0);
+                        numbers[i] = baseVal + Math.trunc(baseVal * advRate);
+                        break;
+                    case "回復":
+                        numbers[i] = calcValueForSpecifiedLevel(numbers[i], this.currentLevel, 1.0);
+                        break;
+                    case "強化":
+                    case "弱化":
+                        numbers[i] = calcValueForSpecifiedLevel(numbers[i], this.currentLevel, 0.5);
+                        break;
+                }
+            }
         }
         else {
             switch (info.effectTypes[0]) {

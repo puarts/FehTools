@@ -1,4 +1,5 @@
 const simulatorImageRoot = "/AetherRaidTacticsBoard/images/";
+const fehIconRoot = "/images/FehIcons/";
 
 const TraitsType = {
     None: 0,
@@ -171,6 +172,9 @@ howToGetDict["神階英雄ガチャ"] = "神階";
 howToGetDict["魔器英雄"] = "魔器";
 howToGetDict["響心英雄"] = "響心";
 howToGetDict["特務機関"] = "特務機関";
+howToGetDict["お供英雄"] = "お供";
+howToGetDict["つながり英雄"] = "つながり";
+howToGetDict["救世英雄"] = "救世";
 const howToGetInvDict = {};
 for (const key in howToGetDict) {
     howToGetInvDict[howToGetDict[key]] = key;
@@ -192,6 +196,32 @@ for (const key in seasonNameToFileName) {
     BlessingIcons[key] = simulatorImageRoot + seasonNameToFileName[key];
 }
 BlessingIcons["なし"] = null;
+
+const specialTypeNameToFileName = {
+    "比翼": "SpecialType-Duo.png",
+    "双界": "SpecialType-Harmonized.png",
+    "魔器": "Icon_Arcane_Weapon.webp",
+    "響心": "Icon_Attuned_Skill.webp",
+    "紋章士": "Icon_Hero_Type_Emblem.webp",
+    "お供": "Icon_tamer.webp",
+    "つながり": "Icon_Connect.webp",
+    "開花": "AscendedFloret.png",
+    "救世風": "Chosen_Effect_Wind.webp",
+    "救世水": "Chosen_Effect_Water.webp",
+    "神階光": "Season_Light.png",
+    "神階闇": "Season_Dark.png",
+    "神階天": "Season_Astra.png",
+    "神階理": "Season_Anima.png",
+    "伝承火": "Season_Fire.png",
+    "伝承水": "Season_Water.png",
+    "伝承風": "Season_Wind.png",
+    "伝承地": "Season_Earth.png",
+};
+const SpecialTypeIcons = {};
+for (const key in specialTypeNameToFileName) {
+    SpecialTypeIcons[key] = fehIconRoot + specialTypeNameToFileName[key];
+}
+SpecialTypeIcons["なし"] = null;
 
 const GrowthRateOfStar5 = {};
 GrowthRateOfStar5[8] = 0.2;
@@ -538,16 +568,23 @@ function calcMaxSp(
     let passiveASp = 300;
     let passiveBSp = 300;
     let passiveCSp = 300;
-    if (weaponType === "杖") {
-        supportSp = 300;
-    }
     let passiveSSp = 240;
     if (!treatsSacredSeal240) {
-        if (weaponType.endsWith("竜") || weaponType == "剣" || weaponType == "槍" || weaponType == "斧") {
+        if (weaponType.endsWith("竜")
+            || weaponType == "剣"
+            || weaponType == "槍"
+            || weaponType == "斧"
+            || weaponType == "杖"
+            || weaponType.endsWith("魔")
+        ) {
             passiveSSp = 300;
         }
     }
-    if (weaponType.endsWith("竜")) {
+    if (weaponType.endsWith("竜") || weaponType.endsWith("獣")
+        || weaponType == "剣" || weaponType == "槍" || weaponType == "斧"
+        || weaponType.endsWith("弓")
+        || weaponType.endsWith("魔")
+    ) {
         passiveBSp = 400;
     }
 
@@ -743,6 +780,16 @@ class HeroInfo {
         this.isDancer = false;
     }
 
+    get specialTypeIconPath() {
+        if (!this.hasSpecialType) return "";
+        const specialType = this.specialTypes[0];
+        return SpecialTypeIcons[specialType] ?? "なし";
+    }
+
+    get hasSpecialType() {
+        return this.specialTypes.length > 0;
+    }
+
     get isNew() {
         return this.releaseDateAsNumber >= g_twoWeekAgoDateAsNumber;
     }
@@ -809,31 +856,60 @@ class HeroInfo {
 
     getBookVersion() {
         let release_date = this.releaseDateAsNumber;
-        if (release_date < 20171128) return 1;
-        if (release_date < 20181211) return 2;
-        if (release_date < 20191205) return 3;
-        if (release_date < 20201208) return 4;
-        if (release_date < 20211206) return 5;
-        if (release_date < 20221201) return 6;
-        if (release_date < 20231201) return 7;
-        if (release_date < 20241201) return 8;
-        if (release_date < 20251201) return 9;
-        if (release_date < 20261201) return 10;
+
+        // 2021年以前の不規則な境界
+        const fixedBoundaries = [
+            { date: 20171128, version: 1 },
+            { date: 20181211, version: 2 },
+            { date: 20191205, version: 3 },
+            { date: 20201208, version: 4 },
+            { date: 20211206, version: 5 },
+            { date: 20221201, version: 6 }, // ここから規則的
+        ];
+
+        // まず不規則な部分を処理
+        for (let i = 0; i < fixedBoundaries.length; i++) {
+            if (release_date < fixedBoundaries[i].date) {
+                return fixedBoundaries[i].version;
+            }
+        }
+
+        // 2022年以降は毎年12月1日で切り替え
+        // fixedBoundaries の最後が version 6 → 2022年12月1日
+        let version = 6;
+        let year = 2022;
+
+        while (true) {
+            const boundary = Number(`${year + 1}1201`); // 翌年の12月1日
+            if (release_date < boundary) {
+                return version;
+            }
+            year++;
+            version++;
+        }
+
         return -1;
     }
 
     getHowToGet(howToGet, specialTypes) {
-        const type = specialTypes.find(x => x == "比翼" || x == "双界");
+        const type = specialTypes.find(x =>
+            x == "比翼" ||
+            x == "双界"
+        );
         if (type != null) return type;
         return howToGet;
     }
 
     get hasBlessing() {
-        return this.blessing != "";
+        return this.blessing != "" && this.blessing != null && this.blessing != "なし";
     }
 
     getBlessing(specialTypes) {
-        const blessingSource = specialTypes.find(x => x.startsWith("伝承") || x.startsWith("神階"));
+        const blessingSource = specialTypes.find(x =>
+            x.startsWith("伝承") ||
+            x.startsWith("神階") ||
+            x.startsWith("救世")
+        );
         if (blessingSource == null) return "なし";
         return blessingSource.substr(2, 1);
     }

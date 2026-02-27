@@ -22,6 +22,11 @@
             color: white;
             position: absolute;
         }
+
+        .metaIcon {
+            width: 20px;
+            height: 20px;
+        }
     </style>
 
     <div class="sk-fading-circle" id="loader">
@@ -160,7 +165,9 @@
             <label for="isAscendingOrder" class="checkItem"><input id="isAscendingOrder" type="checkbox"
                     v-model="isAscendingOrder" @change="updateRanks">ワーストランキング</label>
         </fieldset>
-
+        <div>
+            名前フィルター <input type="text" v-model="nameFilter" @input="updateRanks">(空白区切りで複数可)
+        </div>
         <div style="display: none;">
             {{message}}
         </div>
@@ -178,8 +185,13 @@
                     <a v-for="child in rankGroup.children" v-bind:href="child.url" v-bind:title="child.name">
                         <div style="position: relative;display:inline-block">
                             <img v-bind:src="child.iconPath" width="50" height="50">
-                            <span class="metaInfo displayTarget" style="right: 0; top: 0;" v-show="child.hasBlessing">
-                                <img v-bind:src="child.blessingIconPath"></span>
+                            <!-- <span class="metaInfo displayTarget" style="right: 0; top: 0;" v-show="child.hasBlessing">
+                                <img v-bind:src="child.blessingIconPath">
+                            </span> -->
+                            <span class="metaInfo displayTarget" style="right: 0; top: 0;"
+                                v-show="child.hasSpecialType">
+                                <img class="metaIcon" v-bind:src="child.specialTypeIconPath">
+                            </span>
                             <span class="metaInfo displayTarget" style="font-size:12px;right: 0; bottom: -5px;"
                                 v-show="showsSp">
                                 {{child.maxSp}}</span>
@@ -229,7 +241,7 @@
                 return;
             }
 
-            let reloadSuffix = "20240120_2";
+            let reloadSuffix = "20260225";
             let scriptFileName = scriptFileNames[index];
             let src = scriptFileName + "?" + reloadSuffix;
             const startTime = Date.now();
@@ -243,9 +255,9 @@
         window.addEventListener("load", function (e) {
             const startTime = Date.now();
             loadScripts([
-                "/FehTools/TierList/Utilities.js?20250803_2",
-                "/FehTools/TierList/HeroInfo.js?20250803_2",
-                "/FehTools/TierList/ArenaScoreRankingApp.js?20250803_2",
+                "/FehTools/TierList/Utilities.js",
+                "/FehTools/TierList/HeroInfo.js",
+                "/FehTools/TierList/ArenaScoreRankingApp.js",
             ], () => {
                 const endTime = Date.now();
                 console.log(`${endTime - startTime} ms to load all scripts`);

@@ -87,6 +87,8 @@ class AppData extends SqliteDatabase {
             ["5", "5/4", "4/3"], "Rarity");
         this.displayDancerTypes = createBoolPropsFromStrArray([true, false], "Dancer", v => v ? "踊り子" : "踊り子以外");
 
+        this.nameFilter = "";
+
         this.isDuelSkillEnabled = true;
         this.treatsSacredSeal240 = false;
         this.treatsPassiveB300 = false;
@@ -280,11 +282,13 @@ class AppData extends SqliteDatabase {
         const enabledDancer = this.displayDancerTypes.filter(x => x.value).map(x => x.id);
         const skipsDancer = enabledDancer.length == 0 || enabledDancer.length == this.displayDancerTypes.length;
 
-
+        const skipNameFilter = this.nameFilter == "";
+        const nameFilters = Array.from(this.nameFilter.split(' ').filter(x => x != ""));
 
         const heroes = this.heroInfos
             .filter(x =>
-                (skipsMoveTypes || enabledMoveTypes.includes(x.moveType))
+                (skipNameFilter || nameFilters.some(nameFilter => x.name.includes(nameFilter)))
+                && (skipsMoveTypes || enabledMoveTypes.includes(x.moveType))
                 && (skipsWeaponTypes || enabledWeaponTypes.includes(x.weaponType))
                 && (skipsColorTypes || enabledColorTypes.includes(x.color))
                 && (skipsHowToGet || enabledHowToGet.includes(x.howToGet))
