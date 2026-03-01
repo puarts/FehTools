@@ -297,10 +297,16 @@ class AppData extends AppDataBase {
             };
         }
 
+        const rarityCategory = this.__createSearchTextInfoCategoryByExistingValues(ColumnType.rarity, true);
+
+        // まだ少ないのでデフォルトで全表示しておく
+        for (const info of rarityCategory.searchTextInfos) {
+            info.isEnabled = true;
+        }
 
         this.__addSearchTextInfoCategories([
             this.__createSearchTextInfoCategoryByExistingValues(ColumnType.type, true),
-            this.__createSearchTextInfoCategoryByExistingValues(ColumnType.rarity, true),
+            rarityCategory,
             this.__createSearchTextInfoCategory(
                 "補正",
                 this.__getColumnName(ColumnType.name),

@@ -26,6 +26,13 @@ class MagicInfo {
     }
 }
 
+class WeaponInfo {
+    constructor(name, rarity) {
+        this.name = name;
+        this.rarity = rarity;
+    }
+}
+
 function calcValueForSpecifiedLevel(initValue, currentLevel, incrementMultiply = 1) {
     return Math.floor(initValue + ((initValue * incrementMultiply) * 0.1) * (currentLevel - 1));
 }
