@@ -241,7 +241,7 @@
                 return;
             }
 
-            let reloadSuffix = "20260225";
+            let reloadSuffix = "20260225_6";
             let scriptFileName = scriptFileNames[index];
             let src = scriptFileName + "?" + reloadSuffix;
             const startTime = Date.now();
@@ -285,11 +285,32 @@
                     mounted: () => {
                         // コンポーネントがマウントされた後に実行される処理を記述します
                         g_appData.init(() => {
-                            const loader = document.getElementById("loader");
-                            loader.style.display = "none";
-                            const app = document.getElementById("app");
-                            app.style.display = "";
-                        });
+                        })
+                            .then(result => {
+                                // 成功時の処理
+                                const loader = document.getElementById("loader");
+                                loader.style.display = "none";
+                                const app = document.getElementById("app");
+                                app.style.display = "";
+                                console.log("初期化完了");
+                            })
+                            .catch(err => {
+                                // ここで例外をキャッチできる
+                                console.error("エラー:", err);
+                                const loader = document.getElementById("loader");
+                                loader.style.display = "none";
+                                const app = document.getElementById("app");
+                                app.style.display = "";
+                                app.innerHTML = `
+<div style="color: red; font-weight: bold;">
+    初期化中にエラーが発生しました。
+</div>
+<pre style="color: #b00; font-size: 12px; white-space: pre-wrap; margin-top: 6px;">
+${err.stack || err}
+</pre>
+        `;
+
+                            });
                     }
                 });
 

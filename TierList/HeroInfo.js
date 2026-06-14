@@ -200,7 +200,7 @@ BlessingIcons["なし"] = null;
 const specialTypeNameToFileName = {
     "比翼": "SpecialType-Duo.png",
     "双界": "SpecialType-Harmonized.png",
-    "魔器": "Icon_Arcane_Weapon.webp",
+    "魔器": "Rearmed_Hero_icon.png",
     "響心": "Icon_Attuned_Skill.webp",
     "紋章士": "Icon_Hero_Type_Emblem.webp",
     "お供": "Icon_tamer.webp",
@@ -738,8 +738,8 @@ class HeroInfo {
         this.releaseDate = releaseDate;
         this.releaseDateAsNumber = releaseDate != null ? Number(releaseDate.replace(/-/g, "")) : 0;
         this.skillNames = skillNames;
-        this.sourceOrigins = origin.split('|');
-        this.origin = this.__convertOrigin(origin);
+        this.sourceOrigins = origin == null ? [] : origin.split('|');
+        this.origin = this.__convertOrigin(origin ?? "");
         this.origins = this.origin.split('|');
         this.rarities = rarities ?? [];
         this.rarityStr = rarities.join("/");
@@ -864,7 +864,6 @@ class HeroInfo {
             { date: 20191205, version: 3 },
             { date: 20201208, version: 4 },
             { date: 20211206, version: 5 },
-            { date: 20221201, version: 6 }, // ここから規則的
         ];
 
         // まず不規則な部分を処理
@@ -880,7 +879,7 @@ class HeroInfo {
         let year = 2022;
 
         while (true) {
-            const boundary = Number(`${year + 1}1201`); // 翌年の12月1日
+            const boundary = Number(`${year}1201`); // 翌年の12月1日
             if (release_date < boundary) {
                 return version;
             }

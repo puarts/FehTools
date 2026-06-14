@@ -108,6 +108,10 @@
             width: 300px;
             height: 200px;
         }
+
+        #resultImg {
+            image-rendering: auto;
+        }
     </style>
     <div id="app">
         <p style="color: blue;">
@@ -800,6 +804,7 @@
             resultCanvas.height = croppedCanvas.height;
             let resizeRatio = getResizeRatio(appData.iconSizeType);
             let ctx = resultCanvas.getContext("2d");
+            setHighQualityImageSmoothing(ctx);
             ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
 
             // フレームの外側を抜く
@@ -947,6 +952,7 @@
             resultCanvas.width = croppedCanvas.width;
             resultCanvas.height = croppedCanvas.height;
             let ctx = resultCanvas.getContext("2d");
+            setHighQualityImageSmoothing(ctx);
             ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
 
             // フレームの外側を抜く
@@ -1035,8 +1041,8 @@
             resultCanvas.width = croppedCanvas.width;
             resultCanvas.height = croppedCanvas.height;
             let ctx = resultCanvas.getContext("2d");
+            setHighQualityImageSmoothing(ctx);
             ctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
-            ctx.imageSmoothingEnabled = true;
             // フレームの外側を抜く
             let circleDrawRadius = radius - thickness / 2;
             {
@@ -1229,6 +1235,13 @@
             }
         }
 
+        function setHighQualityImageSmoothing(ctx) {
+            ctx.imageSmoothingEnabled = true;
+            if ("imageSmoothingQuality" in ctx) {
+                ctx.imageSmoothingQuality = "high";
+            }
+        }
+
         let cropper = null;
         const cropAspectRatio = 1.0 / 1.0;
         const scaledWidth = 400;
@@ -1265,7 +1278,7 @@
                 croppedCanvas.width = getIconSize(appData.iconSizeType);
                 croppedCanvas.height = croppedCanvas.width;
 
-                ctx.imageSmoothingEnabled = true;
+                setHighQualityImageSmoothing(ctx);
                 ctx.clearRect(0, 0, croppedCanvas.width, croppedCanvas.height);
                 ctx.drawImage(image,
                     event.detail.x / scale, event.detail.y / scale, event.detail.width / scale, event.detail.height / scale,

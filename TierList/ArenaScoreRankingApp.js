@@ -348,8 +348,8 @@ class AppData extends SqliteDatabase {
         return nameToRowDict;
     }
 
-    init(afterInitFunc = null) {
-        this.initDatabase(() => {
+    async init(afterInitFunc = null) {
+        await this.initDatabase(() => {
             this.heroDb = this.dbs[0];
             this.skillDb = this.dbs[1];
             this.skillNameToRowDict = this.__createSkillDict();
